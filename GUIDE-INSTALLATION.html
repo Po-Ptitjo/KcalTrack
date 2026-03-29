@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide d'installation — KCalTrack PWA</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0a0a0f;
+    color: #f0f0f8;
+    font-family: 'DM Sans', sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+    line-height: 1.6;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(200,245,66,0.12);
+    border: 1.5px solid rgba(200,245,66,0.3);
+    color: #c8f542;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+    line-height: 1.1;
+  }
+  h1 span { color: #c8f542; }
+  .subtitle { color: #9090b0; font-size: 15px; margin-bottom: 40px; }
+  .method {
+    background: #13131c;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .method-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .method-icon {
+    width: 48px; height: 48px;
+    background: rgba(200,245,66,0.1);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .method-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .method-sub { font-size: 12px; color: #5a5a7a; margin-top: 2px; }
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    background: #c8f542;
+    color: #0a0a0f;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .step-content { flex: 1; padding-top: 4px; }
+  .step-content strong { color: #f0f0f8; font-weight: 600; display: block; margin-bottom: 4px; }
+  .step-content p { color: #9090b0; font-size: 14px; }
+  code {
+    background: #1c1c2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #c8f542;
+  }
+  .tip {
+    background: rgba(107,197,255,0.07);
+    border: 1px solid rgba(107,197,255,0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #6bc5ff;
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .warning {
+    background: rgba(255,179,71,0.07);
+    border: 1px solid rgba(255,179,71,0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #ffb347;
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+  }
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 32px 0; }
+  .file-list {
+    background: #1c1c2e;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 2;
+    color: #9090b0;
+  }
+  .file-list .dir { color: #6bc5ff; }
+  .file-list .file { color: #c8f542; }
+  .file-list .desc { color: #5a5a7a; font-family: 'DM Sans', sans-serif; font-size: 12px; }
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    margin-top: 36px;
+  }
+</style>
+</head>
+<body>
+
+<div class="badge">📱 Guide PWA</div>
+<h1>Installer <span>KCalTrack</span><br>sur Android</h1>
+<p class="subtitle">Transformez l'application web en vraie app Android en quelques minutes — sans Play Store, sans code complexe.</p>
+
+<div class="method">
+  <div class="method-header">
+    <div class="method-icon">🌐</div>
+    <div>
+      <div class="method-title">Méthode 1 — GitHub Pages (gratuit, recommandée)</div>
+      <div class="method-sub">Héberger l'app en ligne gratuitement et l'installer sur Android</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <strong>Créer un compte GitHub</strong>
+      <p>Allez sur <code>github.com</code> et créez un compte gratuit si vous n'en avez pas.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <strong>Créer un nouveau dépôt public</strong>
+      <p>Cliquez sur <strong>New repository</strong>, nommez-le <code>kcaltrack</code>, cochez <em>"Public"</em> puis <strong>Create repository</strong>.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <strong>Uploader les fichiers</strong>
+      <p>Cliquez sur <strong>Upload files</strong> et glissez TOUS les fichiers du dossier <code>kcaltrack-pwa/</code> (en respectant la structure avec le dossier <code>icons/</code>).</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <strong>Activer GitHub Pages</strong>
+      <p>Allez dans <strong>Settings → Pages</strong>, choisissez la branche <code>main</code>, racine <code>/</code>, puis <strong>Save</strong>. Attendez 2 minutes.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <strong>Votre URL sera :</strong>
+      <p><code>https://VOTRE-PSEUDO.github.io/kcaltrack/</code></p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-content">
+      <strong>Installer sur Android</strong>
+      <p>Ouvrez l'URL sur <strong>Chrome Android</strong> → menu <strong>⋮</strong> → <strong>"Ajouter à l'écran d'accueil"</strong>. L'app apparaît comme une vraie application !</p>
+    </div>
+  </div>
+
+  <div class="tip">💡 Une bannière d'installation apparaîtra automatiquement dans l'app après quelques secondes.</div>
+</div>
+
+<div class="method">
+  <div class="method-header">
+    <div class="method-icon">💻</div>
+    <div>
+      <div class="method-title">Méthode 2 — Serveur local (pour tester chez soi)</div>
+      <div class="method-sub">Tester l'app sur votre réseau WiFi local</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <strong>Installer Node.js</strong>
+      <p>Téléchargez Node.js sur <code>nodejs.org</code> (version LTS).</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <strong>Lancer un serveur local</strong>
+      <p>Dans un terminal, naviguez dans le dossier <code>kcaltrack-pwa/</code> et tapez :</p>
+      <p style="margin-top:8px;"><code>npx serve . -l 3000</code></p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <strong>Accéder depuis votre téléphone</strong>
+      <p>Trouvez l'IP de votre PC (ex: <code>192.168.1.10</code>) et ouvrez <code>http://192.168.1.10:3000</code> sur Chrome Android.</p>
+    </div>
+  </div>
+
+  <div class="warning">⚠️ Le Service Worker (mode hors-ligne) ne fonctionne qu'en HTTPS ou localhost. Pour une vraie installation, utilisez GitHub Pages.</div>
+</div>
+
+<div class="divider"></div>
+
+<h2>📁 Structure des fichiers à uploader</h2>
+<div class="file-list">
+<span class="dir">kcaltrack-pwa/</span><br>
+├── <span class="file">index.html</span> &nbsp;<span class="desc">← L'application principale</span><br>
+├── <span class="file">manifest.json</span> &nbsp;<span class="desc">← Métadonnées PWA (nom, icônes…)</span><br>
+├── <span class="file">sw.js</span> &nbsp;<span class="desc">← Service Worker (mode hors-ligne)</span><br>
+└── <span class="dir">icons/</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-72.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-96.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-128.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-144.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-152.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-192.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="file">icon-384.png</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file">icon-512.png</span>
+</div>
+
+<div class="divider"></div>
+
+<h2>✅ Ce que vous obtenez</h2>
+<div class="method" style="padding:20px 28px;">
+  <div class="step"><div class="step-num" style="background:#6bc5ff;">✓</div><div class="step-content"><strong>Icône sur l'écran d'accueil</strong><p>Comme une vraie app Android, avec l'icône KCalTrack verte.</p></div></div>
+  <div class="step"><div class="step-num" style="background:#6bc5ff;">✓</div><div class="step-content"><strong>Mode plein écran</strong><p>Sans barre d'adresse Chrome — identique à une app native.</p></div></div>
+  <div class="step"><div class="step-num" style="background:#6bc5ff;">✓</div><div class="step-content"><strong>Fonctionne hors-ligne</strong><p>Le Service Worker met en cache l'app. Elle s'ouvre même sans internet.</p></div></div>
+  <div class="step"><div class="step-num" style="background:#6bc5ff;">✓</div><div class="step-content"><strong>Données sauvegardées</strong><p>Stockage local sur le téléphone — vos calories restent même après fermeture.</p></div></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0f">
+<title>KCalTrack — Suivi Nutritionnel</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KCalTrack">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131c;
+    --surface2: #1c1c2e;
+    --surface3: #242438;
+    --border: rgba(255,255,255,0.07);
+    --accent: #c8f542;
+    --accent2: #ff6b6b;
+    --accent3: #6bc5ff;
+    --accent4: #ffb347;
+    --text: #f0f0f8;
+    --text2: #9090b0;
+    --text3: #5a5a7a;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    position: relative;
+    padding-bottom: calc(80px + var(--safe-bottom));
+  }
+
+  /* HEADER */
+  .header {
+    padding: 52px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(to bottom, var(--bg) 80%, transparent);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6px;
+  }
+
+  .app-name {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .date-chip {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text3);
+    background: var(--surface2);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .day-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    line-height: 1.1;
+  }
+
+  /* DAY NAVIGATOR */
+  .day-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .day-nav::-webkit-scrollbar { display: none; }
+
+  .day-pill {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 52px;
+  }
+  .day-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .day-pill:active { transform: scale(0.94); }
+  .day-pill .day-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .day-pill.active .day-label { color: #0a0a0f; }
+  .day-pill .day-num {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .day-pill.active .day-num { color: #0a0a0f; }
+  .day-pill .day-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent2);
+    opacity: 0;
+  }
+  .day-pill.has-data .day-dot { opacity: 1; }
+  .day-pill.active .day-dot { background: #0a0a0f; }
+
+  /* CALORIE RING */
+  .ring-section {
+    padding: 0 20px 24px;
+  }
+
+  .ring-card {
+    background: var(--surface);
+    border-radius: 24px;
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ring-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(200,245,66,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .ring-inner {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .ring-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .ring-svg {
+    width: 110px;
+    height: 110px;
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg { fill: none; stroke: var(--surface3); stroke-width: 10; }
+  .ring-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring-pct {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .ring-unit {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text3);
+    letter-spacing: 1px;
+  }
+
+  .ring-stats {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .ring-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ring-stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  .ring-stat-val {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .ring-stat-val.green { color: var(--accent); }
+  .ring-stat-val.red { color: var(--accent2); }
+  .ring-stat-val.blue { color: var(--accent3); }
+
+  .limit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .limit-label {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .limit-edit-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(200,245,66,0.1);
+    border: 1px solid rgba(200,245,66,0.2);
+    border-radius: 20px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .limit-edit-btn:active { transform: scale(0.95); }
+
+  /* PROGRESS BAR */
+  .progress-section {
+    padding: 0 20px 24px;
+  }
+
+  .bar-wrap {
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  .bar-track {
+    height: 10px;
+    background: var(--surface3);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+
+  .bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 100%);
+  }
+
+  /* FOOD LOG */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px 12px;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .add-btn:active { transform: scale(0.95); opacity: 0.9; }
+
+  .entries-list {
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .entry-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    animation: slideIn 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .entry-card:active { transform: scale(0.98); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .entry-icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .entry-info { flex: 1; min-width: 0; }
+
+  .entry-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entry-desc {
+    font-size: 12px;
+    color: var(--text3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entry-kcal {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 800;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 10px;
+  }
+
+  .entry-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--surface);
+    padding: 0 8px;
+    transform: translateX(100%);
+    transition: transform 0.25s;
+  }
+  .entry-card.swiped .entry-actions { transform: translateX(0); }
+
+  .action-btn {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: transform 0.15s;
+  }
+  .action-btn:active { transform: scale(0.88); }
+  .btn-edit { background: rgba(107,197,255,0.15); color: var(--accent3); }
+  .btn-delete { background: rgba(255,107,107,0.15); color: var(--accent2); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text3);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; line-height: 1.5; }
+
+  /* CHARTS */
+  .charts-section { padding: 24px 20px 0; }
+
+  .chart-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .chart-tab {
+    flex: 1;
+    text-align: center;
+    padding: 9px;
+    border-radius: 10px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chart-tab.active {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px;
+  }
+
+  .chart-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 20px;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 120px;
+  }
+
+  .bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar-col-wrap {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    position: relative;
+  }
+
+  .bar-col {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    min-height: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bar-col::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+  }
+
+  .bar-limit-line {
+    position: absolute;
+    width: 100%;
+    height: 1.5px;
+    background: rgba(200,245,66,0.3);
+    left: 0;
+  }
+
+  .bar-day-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .chart-avg {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .chart-avg-label { font-size: 12px; color: var(--text3); }
+  .chart-avg-val {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    padding: 10px 20px calc(10px + var(--safe-bottom));
+    background: rgba(10,10,15,0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    z-index: 200;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 20px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: none;
+  }
+  .nav-item:active { transform: scale(0.9); }
+  .nav-item.active { background: var(--surface2); }
+
+  .nav-icon { font-size: 20px; }
+  .nav-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--text3);
+  }
+  .nav-item.active .nav-label { color: var(--accent); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 300;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 28px 28px 0 0;
+    padding: 24px 20px calc(32px + var(--safe-bottom));
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+    border: 1px solid var(--border);
+    border-bottom: none;
+  }
+  .modal-overlay.open .modal {
+    transform: translateY(0);
+  }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--surface3);
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 20px;
+    letter-spacing: -0.3px;
+  }
+
+  .form-group { margin-bottom: 16px; }
+
+  .form-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text3); }
+
+  .emoji-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .emoji-btn {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .emoji-btn.selected {
+    border-color: var(--accent);
+    background: rgba(200,245,66,0.1);
+  }
+  .emoji-btn:active { transform: scale(0.9); }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text2);
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-save {
+    flex: 2;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    border: none;
+    color: #0a0a0f;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-cancel:active, .btn-save:active { transform: scale(0.97); }
+
+  .error-msg {
+    color: var(--accent2);
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+  }
+  .error-msg.show { display: block; }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* STATS VIEW */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 20px 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .stat-card-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .stat-card-val {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-card-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  /* EXPORT */
+  .export-section { padding: 0 20px 16px; }
+
+  .export-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text2);
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.15s;
+    margin-bottom: 10px;
+  }
+  .export-btn:active { transform: scale(0.98); }
+  .export-btn.primary {
+    background: rgba(200,245,66,0.1);
+    border-color: rgba(200,245,66,0.3);
+    color: var(--accent);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    z-index: 500;
+    opacity: 0;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* RIPPLE */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    transform: scale(0);
+    animation: ripple 0.5s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* DIVIDER */
+  .section-divider { height: 16px; }
+
+  /* SCROLL */
+  .scroll-pad { height: 20px; }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="app-name">KCalTrack</div>
+    <div class="date-chip" id="dateChip">—</div>
+  </div>
+  <div class="day-title" id="dayTitle">Chargement…</div>
+</div>
+
+<!-- DAY NAVIGATOR -->
+<div class="day-nav" id="dayNav"></div>
+
+<!-- VIEWS -->
+<!-- HOME VIEW -->
+<div class="view active" id="viewHome">
+
+  <!-- RING -->
+  <div class="ring-section">
+    <div class="ring-card">
+      <div class="ring-inner">
+        <div class="ring-wrap">
+          <svg class="ring-svg" viewBox="0 0 120 120">
+            <circle class="ring-bg" cx="60" cy="60" r="50"/>
+            <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="50"
+              stroke-dasharray="314"
+              stroke-dashoffset="314"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-pct" id="ringPct">0%</div>
+            <div class="ring-unit">CONSOMMÉ</div>
+          </div>
+        </div>
+        <div class="ring-stats">
+          <div class="ring-stat">
+            <div class="ring-stat-label">Consommé</div>
+            <div class="ring-stat-val green" id="statConsumed">0 kcal</div>
+          </div>
+          <div class="ring-stat">
+            <div class="ring-stat-label">Restant</div>
+            <div class="ring-stat-val blue" id="statRemaining">— kcal</div>
+          </div>
+          <div class="ring-stat">
+            <div class="ring-stat-label">Limite</div>
+            <div class="ring-stat-val" id="statLimit" style="color:var(--text2)">— kcal</div>
+          </div>
+        </div>
+      </div>
+      <div class="limit-row">
+        <span class="limit-label">Objectif calorique quotidien</span>
+        <button class="limit-edit-btn" onclick="openLimitModal()">✏️ Modifier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-section">
+    <div class="bar-wrap">
+      <div class="bar-labels">
+        <span>0 kcal</span>
+        <span id="barLimitLabel">2000 kcal</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="barFill" style="width:0%; background: var(--accent);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTRIES -->
+  <div class="section-header">
+    <div class="section-title">📋 Repas du jour</div>
+    <button class="add-btn" onclick="openAddModal()">+ Ajouter</button>
+  </div>
+
+  <div class="entries-list" id="entriesList"></div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- CHARTS VIEW -->
+<div class="view" id="viewCharts">
+  <div class="charts-section">
+    <div class="chart-tabs">
+      <div class="chart-tab active" id="tabWeek" onclick="switchChartTab('week')">7 jours</div>
+      <div class="chart-tab" id="tabMonth" onclick="switchChartTab('month')">30 jours</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title" id="chartTitle">CALORIES — 7 DERNIERS JOURS</div>
+      <div class="bar-chart" id="barChart"></div>
+      <div class="chart-avg">
+        <span class="chart-avg-label">Moyenne quotidienne</span>
+        <span class="chart-avg-val" id="chartAvg">0 kcal</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- STATS GRID -->
+  <div class="section-header">
+    <div class="section-title">📊 Statistiques</div>
+  </div>
+  <div class="stats-grid" id="statsGrid"></div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- SETTINGS VIEW -->
+<div class="view" id="viewSettings">
+  <div style="padding: 0 20px 20px;">
+    <div style="font-family:var(--font-display);font-size:24px;font-weight:800;color:var(--text);margin-bottom:20px;">Paramètres</div>
+
+    <div class="bar-wrap" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Limite calorique par défaut</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <input type="number" class="form-input" id="globalLimitInput" placeholder="Ex: 2000" min="500" max="9999" style="flex:1;">
+        <button class="btn-save" style="flex:0;padding:14px 20px;border-radius:10px;" onclick="saveGlobalLimit()">OK</button>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+    <div class="section-header" style="padding:0 0 12px;">
+      <div class="section-title">📤 Export</div>
+    </div>
+    <div class="export-section" style="padding:0;">
+      <button class="export-btn primary" onclick="exportCSV()">📄 Exporter en CSV</button>
+      <button class="export-btn" onclick="clearAllData()">🗑️ Effacer toutes les données</button>
+    </div>
+  </div>
+  <div class="scroll-pad"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" id="navHome" onclick="switchView('home')">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Accueil</span>
+  </button>
+  <button class="nav-item" id="navCharts" onclick="switchView('charts')">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">Graphiques</span>
+  </button>
+  <button class="nav-item" id="navSettings" onclick="switchView('settings')">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Réglages</span>
+  </button>
+</div>
+
+<!-- MODAL: ADD/EDIT ENTRY -->
+<div class="modal-overlay" id="entryModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">Ajouter un repas</div>
+
+    <div style="margin-bottom:12px;">
+      <div class="form-label">Icône</div>
+      <div class="emoji-row" id="emojiRow"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Titre *</label>
+      <input type="text" class="form-input" id="inputTitle" placeholder="Ex: Petit-déjeuner" maxlength="40">
+      <div class="error-msg" id="errTitle">Veuillez entrer un titre.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input type="text" class="form-input" id="inputDesc" placeholder="Ex: Café, tartines, yaourt…" maxlength="80">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Calories (kcal) *</label>
+      <input type="number" class="form-input" id="inputCal" placeholder="Ex: 450" min="1" max="9999">
+      <div class="error-msg" id="errCal">Entrez un nombre de calories valide (1–9999).</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('entryModal')">Annuler</button>
+      <button class="btn-save" onclick="saveEntry()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: LIMIT -->
+<div class="modal-overlay" id="limitModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Objectif du jour</div>
+    <div class="form-group">
+      <label class="form-label">Limite de calories (kcal)</label>
+      <input type="number" class="form-input" id="inputLimit" placeholder="Ex: 2000" min="500" max="9999">
+      <div class="error-msg" id="errLimit">Entrez une valeur entre 500 et 9999.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('limitModal')">Annuler</button>
+      <button class="btn-save" onclick="saveLimit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────────────────────
+// STATE & STORAGE
+// ───────────────────────────────────────────
+const STORAGE_KEY = 'kcaltrack_v2';
+const EMOJIS = ['🍳','🥗','🍔','🍕','🍣','🥩','🥦','🍜','☕','🧃','🍎','🍰','🥪','🌮','🍱','🍚'];
+const COLORS = ['#c8f542','#ff6b6b','#6bc5ff','#ffb347','#a78bfa','#34d399'];
+const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MONTHS_FR = ['janv','févr','mars','avr','mai','juin','juil','août','sept','oct','nov','déc'];
+
+let state = {
+  globalLimit: 2000,
+  days: {} // { "2025-01-15": { limit: 2000, entries: [{id, emoji, title, desc, cal}] } }
+};
+
+let selectedDay = todayKey();
+let editingEntryId = null;
+let selectedEmoji = EMOJIS[0];
+let currentChartTab = 'week';
+
+function todayKey() {
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+function dayKey(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split('T')[0];
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch(e) {}
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function getDay(key) {
+  if (!state.days[key]) {
+    state.days[key] = { limit: state.globalLimit, entries: [] };
+  }
+  return state.days[key];
+}
+
+function getTotalCal(key) {
+  const day = state.days[key];
+  if (!day) return 0;
+  return day.entries.reduce((s, e) => s + e.cal, 0);
+}
+
+// ───────────────────────────────────────────
+// VIEWS
+// ───────────────────────────────────────────
+let currentView = 'home';
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  if (view === 'home') {
+    document.getElementById('viewHome').classList.add('active');
+    document.getElementById('navHome').classList.add('active');
+    renderHome();
+  } else if (view === 'charts') {
+    document.getElementById('viewCharts').classList.add('active');
+    document.getElementById('navCharts').classList.add('active');
+    renderCharts();
+  } else if (view === 'settings') {
+    document.getElementById('viewSettings').classList.add('active');
+    document.getElementById('navSettings').classList.add('active');
+    document.getElementById('globalLimitInput').value = state.globalLimit;
+  }
+}
+
+// ───────────────────────────────────────────
+// DAY NAVIGATOR
+// ───────────────────────────────────────────
+function renderDayNav() {
+  const nav = document.getElementById('dayNav');
+  nav.innerHTML = '';
+  const today = new Date();
+
+  for (let i = -6; i <= 0; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const key = d.toISOString().split('T')[0];
+    const dayLabel = DAYS_FR[d.getDay()];
+    const dayNum = d.getDate();
+    const hasData = state.days[key] && state.days[key].entries.length > 0;
+
+    const pill = document.createElement('div');
+    pill.className = 'day-pill' + (key === selectedDay ? ' active' : '') + (hasData ? ' has-data' : '');
+    pill.innerHTML = `
+      <div class="day-label">${dayLabel}</div>
+      <div class="day-num">${dayNum}</div>
+      <div class="day-dot"></div>
+    `;
+    pill.addEventListener('click', () => {
+      selectedDay = key;
+      renderAll();
+    });
+    nav.appendChild(pill);
+  }
+  nav.scrollLeft = nav.scrollWidth;
+}
+
+// ───────────────────────────────────────────
+// HEADER
+// ───────────────────────────────────────────
+function renderHeader() {
+  const d = new Date(selectedDay + 'T12:00:00');
+  const isToday = selectedDay === todayKey();
+  const dayName = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][d.getDay()];
+  const dateStr = `${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
+
+  document.getElementById('dayTitle').textContent = isToday ? `Aujourd'hui` : dayName;
+  document.getElementById('dateChip').textContent = dateStr;
+}
+
+// ───────────────────────────────────────────
+// HOME RENDER
+// ───────────────────────────────────────────
+function renderHome() {
+  const day = getDay(selectedDay);
+  const total = getTotalCal(selectedDay);
+  const limit = day.limit;
+  const remaining = limit - total;
+  const pct = Math.min(100, Math.round((total / limit) * 100));
+
+  // Ring
+  const circumference = 314;
+  const offset = circumference - (circumference * pct / 100);
+  const fill = document.getElementById('ringFill');
+  fill.style.strokeDashoffset = offset;
+  fill.style.stroke = pct > 100 ? 'var(--accent2)' : pct > 80 ? 'var(--accent4)' : 'var(--accent)';
+
+  document.getElementById('ringPct').textContent = pct + '%';
+  document.getElementById('statConsumed').textContent = total + ' kcal';
+  document.getElementById('statRemaining').textContent = (remaining >= 0 ? remaining : 0) + ' kcal';
+  document.getElementById('statRemaining').style.color = remaining < 0 ? 'var(--accent2)' : 'var(--accent3)';
+  document.getElementById('statLimit').textContent = limit + ' kcal';
+  document.getElementById('barLimitLabel').textContent = limit + ' kcal';
+
+  // Bar
+  const bar = document.getElementById('barFill');
+  bar.style.width = Math.min(100, pct) + '%';
+  bar.style.background = pct > 100 ? 'var(--accent2)' : pct > 80 ? 'var(--accent4)' : 'var(--accent)';
+
+  // Entries
+  renderEntries();
+}
+
+function renderEntries() {
+  const list = document.getElementById('entriesList');
+  const day = getDay(selectedDay);
+
+  if (day.entries.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🍽️</div>
+        <p>Aucun aliment enregistré<br>pour ce jour.<br><br>Appuyez sur <strong>+ Ajouter</strong> pour commencer.</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  day.entries.forEach((entry, idx) => {
+    const color = COLORS[idx % COLORS.length];
+    const card = document.createElement('div');
+    card.className = 'entry-card';
+    card.innerHTML = `
+      <div class="entry-icon" style="background:${color}20;">${entry.emoji}</div>
+      <div class="entry-info">
+        <div class="entry-title">${escHtml(entry.title)}</div>
+        <div class="entry-desc">${entry.desc ? escHtml(entry.desc) : '—'}</div>
+      </div>
+      <div class="entry-kcal" style="background:${color}18;color:${color};">${entry.cal}</div>
+      <div class="entry-actions">
+        <button class="action-btn btn-edit" onclick="editEntry('${entry.id}');event.stopPropagation()">✏️</button>
+        <button class="action-btn btn-delete" onclick="deleteEntry('${entry.id}');event.stopPropagation()">🗑️</button>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.entry-card').forEach(c => c.classList.remove('swiped'));
+      card.classList.toggle('swiped');
+    });
+    list.appendChild(card);
+  });
+}
+
+// ───────────────────────────────────────────
+// CHARTS
+// ───────────────────────────────────────────
+function renderCharts() {
+  const days = currentChartTab === 'week' ? 7 : 30;
+  document.getElementById('chartTitle').textContent =
+    `CALORIES — ${days === 7 ? '7 DERNIERS JOURS' : '30 DERNIERS JOURS'}`;
+
+  const data = [];
+  const today = new Date();
+  let total = 0, count = 0;
+  const globalLimit = state.globalLimit;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const cal = getTotalCal(key);
+    const dayLimit = state.days[key]?.limit || globalLimit;
+    data.push({ key, cal, limit: dayLimit, label: days === 7 ? DAYS_FR[d.getDay()] : d.getDate() });
+    if (cal > 0) { total += cal; count++; }
+  }
+
+  const avg = count ? Math.round(total / count) : 0;
+  const maxCal = Math.max(...data.map(d => d.cal), globalLimit, 100);
+
+  document.getElementById('chartAvg').textContent = avg + ' kcal';
+
+  const chart = document.getElementById('barChart');
+  chart.innerHTML = '';
+
+  data.forEach((d, i) => {
+    const heightPct = maxCal > 0 ? (d.cal / maxCal) * 100 : 0;
+    const limitPct = (d.limit / maxCal) * 100;
+    const color = d.cal > d.limit ? 'var(--accent2)' : d.cal > d.limit * 0.8 ? 'var(--accent4)' : 'var(--accent)';
+    const isToday = d.key === todayKey();
+
+    const group = document.createElement('div');
+    group.className = 'bar-group';
+    group.style.cursor = 'pointer';
+    group.title = `${d.label}: ${d.cal} kcal`;
+    group.innerHTML = `
+      <div class="bar-col-wrap" style="position:relative;">
+        <div class="bar-limit-line" style="bottom:${limitPct}%;"></div>
+        <div class="bar-col" style="height:${heightPct}%;background:${color};opacity:${isToday ? 1 : 0.7};"></div>
+      </div>
+      <div class="bar-day-label" style="${isToday ? 'color:var(--accent);' : ''}">${d.label}</div>
+    `;
+    chart.appendChild(group);
+  });
+
+  // Stats
+  renderStats(data, avg);
+}
+
+function renderStats(data, avg) {
+  const grid = document.getElementById('statsGrid');
+  const allCals = data.map(d => d.cal).filter(c => c > 0);
+  const max = allCals.length ? Math.max(...allCals) : 0;
+  const min = allCals.length ? Math.min(...allCals) : 0;
+  const streak = calcStreak();
+  const totalDays = Object.keys(state.days).length;
+
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-card-label">Moyenne</div>
+      <div class="stat-card-val" style="color:var(--accent)">${avg}</div>
+      <div class="stat-card-sub">kcal / jour</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Record haut</div>
+      <div class="stat-card-val" style="color:var(--accent2)">${max}</div>
+      <div class="stat-card-sub">kcal max</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Record bas</div>
+      <div class="stat-card-val" style="color:var(--accent3)">${min}</div>
+      <div class="stat-card-sub">kcal min</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Streak</div>
+      <div class="stat-card-val" style="color:var(--accent4)">${streak}</div>
+      <div class="stat-card-sub">jours consécutifs</div>
+    </div>
+    <div class="stat-card" style="grid-column:span 2;">
+      <div class="stat-card-label">Jours suivis au total</div>
+      <div class="stat-card-val">${totalDays}</div>
+      <div class="stat-card-sub">depuis le début</div>
+    </div>
+  `;
+}
+
+function calcStreak() {
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    if (state.days[key] && state.days[key].entries.length > 0) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function switchChartTab(tab) {
+  currentChartTab = tab;
+  document.getElementById('tabWeek').classList.toggle('active', tab === 'week');
+  document.getElementById('tabMonth').classList.toggle('active', tab === 'month');
+  renderCharts();
+}
+
+// ───────────────────────────────────────────
+// MODALS
+// ───────────────────────────────────────────
+function openAddModal() {
+  editingEntryId = null;
+  document.getElementById('modalTitle').textContent = 'Ajouter un repas';
+  document.getElementById('inputTitle').value = '';
+  document.getElementById('inputDesc').value = '';
+  document.getElementById('inputCal').value = '';
+  document.getElementById('errTitle').classList.remove('show');
+  document.getElementById('errCal').classList.remove('show');
+  selectedEmoji = EMOJIS[0];
+  renderEmojiRow();
+  openModal('entryModal');
+  setTimeout(() => document.getElementById('inputTitle').focus(), 400);
+}
+
+function editEntry(id) {
+  const day = getDay(selectedDay);
+  const entry = day.entries.find(e => e.id === id);
+  if (!entry) return;
+  editingEntryId = id;
+  document.getElementById('modalTitle').textContent = 'Modifier le repas';
+  document.getElementById('inputTitle').value = entry.title;
+  document.getElementById('inputDesc').value = entry.desc || '';
+  document.getElementById('inputCal').value = entry.cal;
+  document.getElementById('errTitle').classList.remove('show');
+  document.getElementById('errCal').classList.remove('show');
+  selectedEmoji = entry.emoji;
+  renderEmojiRow();
+  openModal('entryModal');
+}
+
+function saveEntry() {
+  const title = document.getElementById('inputTitle').value.trim();
+  const desc = document.getElementById('inputDesc').value.trim();
+  const calRaw = parseInt(document.getElementById('inputCal').value);
+
+  let valid = true;
+  if (!title) { document.getElementById('errTitle').classList.add('show'); valid = false; }
+  else document.getElementById('errTitle').classList.remove('show');
+  if (!calRaw || calRaw < 1 || calRaw > 9999) { document.getElementById('errCal').classList.add('show'); valid = false; }
+  else document.getElementById('errCal').classList.remove('show');
+  if (!valid) return;
+
+  const day = getDay(selectedDay);
+  if (editingEntryId) {
+    const entry = day.entries.find(e => e.id === editingEntryId);
+    if (entry) { entry.emoji = selectedEmoji; entry.title = title; entry.desc = desc; entry.cal = calRaw; }
+    showToast('✅ Repas modifié');
+  } else {
+    day.entries.push({ id: uid(), emoji: selectedEmoji, title, desc, cal: calRaw });
+    showToast('✅ Repas ajouté');
+  }
+  saveState();
+  closeModal('entryModal');
+  renderAll();
+}
+
+function deleteEntry(id) {
+  const day = getDay(selectedDay);
+  day.entries = day.entries.filter(e => e.id !== id);
+  saveState();
+  renderAll();
+  showToast('🗑️ Repas supprimé');
+}
+
+function openLimitModal() {
+  const day = getDay(selectedDay);
+  document.getElementById('inputLimit').value = day.limit;
+  document.getElementById('errLimit').classList.remove('show');
+  openModal('limitModal');
+  setTimeout(() => document.getElementById('inputLimit').focus(), 400);
+}
+
+function saveLimit() {
+  const val = parseInt(document.getElementById('inputLimit').value);
+  if (!val || val < 500 || val > 9999) {
+    document.getElementById('errLimit').classList.add('show');
+    return;
+  }
+  document.getElementById('errLimit').classList.remove('show');
+  getDay(selectedDay).limit = val;
+  saveState();
+  closeModal('limitModal');
+  renderAll();
+  showToast('✅ Limite mise à jour');
+}
+
+function saveGlobalLimit() {
+  const val = parseInt(document.getElementById('globalLimitInput').value);
+  if (!val || val < 500 || val > 9999) { showToast('❌ Valeur invalide'); return; }
+  state.globalLimit = val;
+  saveState();
+  showToast('✅ Limite par défaut enregistrée');
+}
+
+function renderEmojiRow() {
+  const row = document.getElementById('emojiRow');
+  row.innerHTML = '';
+  EMOJIS.forEach(em => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-btn' + (em === selectedEmoji ? ' selected' : '');
+    btn.textContent = em;
+    btn.onclick = () => {
+      selectedEmoji = em;
+      renderEmojiRow();
+    };
+    row.appendChild(btn);
+  });
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this.id);
+  });
+});
+
+// ───────────────────────────────────────────
+// EXPORT
+// ───────────────────────────────────────────
+function exportCSV() {
+  let csv = 'Date,Titre,Description,Calories\n';
+  Object.keys(state.days).sort().forEach(key => {
+    const day = state.days[key];
+    day.entries.forEach(e => {
+      csv += `"${key}","${e.title}","${e.desc || ''}",${e.cal}\n`;
+    });
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kcaltrack_export_${todayKey()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📄 Export CSV téléchargé');
+}
+
+function clearAllData() {
+  if (confirm('Effacer TOUTES les données ? Cette action est irréversible.')) {
+    state.days = {};
+    saveState();
+    renderAll();
+    showToast('🗑️ Données effacées');
+  }
+}
+
+// ───────────────────────────────────────────
+// UTILS
+// ───────────────────────────────────────────
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ───────────────────────────────────────────
+// RENDER ALL
+// ───────────────────────────────────────────
+function renderAll() {
+  renderHeader();
+  renderDayNav();
+  if (currentView === 'home') renderHome();
+  else if (currentView === 'charts') renderCharts();
+}
+
+// ───────────────────────────────────────────
+// INIT
+// ───────────────────────────────────────────
+loadState();
+renderEmojiRow();
+renderAll();
+
+// Auto-refresh at midnight
+setInterval(() => {
+  const newToday = todayKey();
+  if (selectedDay !== newToday) {
+    selectedDay = newToday;
+    renderAll();
+  }
+}, 60000);
+
+// Keyboard: Escape closes modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+  }
+});
+
+
+// Register Service Worker (PWA)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js")
+      .then(() => console.log("SW registered"))
+      .catch(e => console.log("SW error", e));
+  });
+}
+
+// PWA Install prompt
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  setTimeout(() => { if (deferredPrompt) showInstallBanner(); }, 3000);
+});
+
+function showInstallBanner() {
+  if (document.getElementById("installBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "installBanner";
+  banner.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1.5px solid var(--accent);border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:400;max-width:390px;width:calc(100% - 40px);box-shadow:0 8px 32px rgba(0,0,0,0.4);";
+  banner.innerHTML = "<span style=\"font-size:24px;\">📲<\/span><div style=\"flex:1;\"><div style=\"font-family:var(--font-display);font-size:13px;font-weight:800;color:var(--text);\">Installer KCalTrack<\/div><div style=\"font-size:11px;color:var(--text3);margin-top:2px;\">Ajouter à l'écran d'accueil<\/div><\/div><button onclick=\"installPWA()\" style=\"background:var(--accent);color:#0a0a0f;border:none;border-radius:10px;padding:8px 14px;font-family:var(--font-display);font-size:12px;font-weight:800;cursor:pointer;\">Installer<\/button><button onclick=\"document.getElementById('installBanner').remove()\" style=\"background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;\">✕<\/button>";
+  document.body.appendChild(banner);
+}
+
+async function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  const banner = document.getElementById("installBanner");
+  if (banner) banner.remove();
+  if (outcome === "accepted") showToast("🎉 App installée avec succès !");
+}
+// Swipe to close modals
+let touchStartY = 0;
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; });
+  modal.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - touchStartY > 80) {
+      closeModal(modal.parentElement.id);
+    }
+  });
+});
+</script>
+</body>
+</html>
