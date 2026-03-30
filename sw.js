@@ -1,5 +1,5 @@
 // KCalTrack Service Worker v1.0
-const CACHE_NAME = 'kcaltrack-v1';
+const CACHE_NAME = 'kcaltrack-v3';
 const ASSETS = [
   '/',
   '/index.html',
