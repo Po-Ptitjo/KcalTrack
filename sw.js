@@ -21,12 +21,14 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: clean only OLD kcaltrack caches, leave other apps alone
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        keys
+          .filter(k => k.startsWith('kcaltrack-') && k !== CACHE_NAME)
+          .map(k => caches.delete(k))
       )
     )
   );
