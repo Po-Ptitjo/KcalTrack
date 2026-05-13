@@ -1,9 +1,10 @@
 {
+  "id": "/KcalTrack/",
   "name": "KCalTrack — Suivi Nutritionnel",
   "short_name": "KCalTrack",
   "description": "Suivi des calories quotidiennes avec graphiques et statistiques",
   "start_url": "/KcalTrack/index.html",
-  "scope" : "/KcalTrack/",
+  "scope": "/KcalTrack/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#0a0a0f",
@@ -65,7 +66,7 @@
       "name": "Ajouter un repas",
       "short_name": "+ Repas",
       "description": "Ajouter rapidement un aliment",
-      "url": "/index.html#add",
+      "url": "/KcalTrack/index.html#add",
       "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }
   ]
