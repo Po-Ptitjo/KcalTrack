@@ -1814,7 +1814,7 @@ document.addEventListener('keydown', e => {
 // Register Service Worker (PWA)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js")
+    navigator.serviceWorker.register("/KcalTrack/sw.js", { scope: "/KcalTrack/" })
       .then(() => console.log("SW registered"))
       .catch(e => console.log("SW error", e));
   });
