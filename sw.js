@@ -1,11 +1,12 @@
-// KCalTrack Service Worker v1.0
-const CACHE_NAME = 'kcaltrack-v7';
+// KCalTrack Service Worker v2.0
+const CACHE_NAME = 'kcaltrack-v8';
+const BASE = '/KcalTrack';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/manifest.json',
+  BASE + '/icons/icon-192.png',
+  BASE + '/icons/icon-512.png',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap'
 ];
 
@@ -24,7 +25,7 @@ self.addEventListener('install', event => {
 // Activate: clean only OLD kcaltrack caches, leave other apps alone
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
+    caches.keys().then(keys =>&
       Promise.all(
         keys
           .filter(k => k.startsWith('kcaltrack-') && k !== CACHE_NAME)
@@ -38,6 +39,9 @@ self.addEventListener('activate', event => {
 // Fetch: cache-first for local, network-first for external
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
+
+  // Only handle requests within our scope
+  if (!url.pathname.startsWith(BASE) && !url.hostname.includes('fonts.')) return;
 
   // For Google Fonts — network first, fallback to cache
   if (url.hostname.includes('fonts.')) {
