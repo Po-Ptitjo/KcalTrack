@@ -212,6 +212,12 @@
   .bar-limit-line { position: absolute; width: 100%; height: 1.5px; background: rgba(200,245,66,0.3); left: 0; }
   .bar-day-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
   .chart-avg { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .weight-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .weight-labels-row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.5px; margin-bottom: 4px; }
+  .weight-chart-wrap { width: 100%; }
+  .weight-chart-wrap svg circle { cursor: pointer; transition: r 0.15s; }
+  .weight-chart-wrap svg circle:hover { r: 5; }
+  .weight-empty { display: none; text-align: center; font-size: 13px; color: var(--text3); padding: 30px 0; }
   .chart-avg-label { font-size: 12px; color: var(--text3); }
   .chart-avg-val { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--accent); }
 
@@ -451,6 +457,24 @@
       <div class="chart-title">MACROS — MOYENNES</div>
       <div class="macro-chart-rows" id="macroChartRows"></div>
     </div>
+
+    <!-- Weight chart -->
+    <div class="chart-card">
+      <div class="weight-header">
+        <div class="chart-title" style="margin-bottom:0;">⚖️ ÉVOLUTION DU POIDS</div>
+        <button class="add-btn" onclick="openWeightModal()">+ Poids</button>
+      </div>
+      <div class="weight-labels-row" id="weightLabelsRow">
+        <span id="weightMaxLabel"></span>
+        <span id="weightMinLabel"></span>
+      </div>
+      <div class="weight-chart-wrap" id="weightChartWrap"></div>
+      <div class="weight-empty" id="weightEmpty">Aucune pesée enregistrée pour l'instant.</div>
+      <div class="chart-avg" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span class="chart-avg-label" id="weightLastInfo">Aucune pesée enregistrée</span>
+        <span id="weightDelta" style="font-size:12px;color:var(--text2);"></span>
+      </div>
+    </div>
   </div>
 
   <div class="section-divider"></div>
@@ -663,6 +687,27 @@
   </div>
 </div>
 
+<!-- MODAL: WEIGHT -->
+<div class="modal-overlay" id="weightModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚖️ Ajouter un poids</div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-input" id="inputWeightDate">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Poids (kg)</label>
+      <input type="number" class="form-input" id="inputWeightValue" placeholder="Ex: 72.4" min="1" max="500" step="0.1" inputmode="decimal">
+      <div class="error-msg" id="errWeight">Entrez une date et un poids valide (entre 1 et 500 kg).</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('weightModal')">Annuler</button>
+      <button class="btn-save" onclick="saveWeight()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════
 // STATE & STORAGE
@@ -678,8 +723,10 @@ let state = {
   globalProt: 150,
   globalGluc: 250,
   globalLip: 70,
-  days: {}
+  days: {},
+  weights: []
   // days[key]: { limit, macroP?, macroG?, macroL?, note, entries:[{id,emoji,title,desc,cal,prot?,gluc?,lip?}] }
+  // weights: [{ date:'YYYY-MM-DD', value: 72.4 }]
 };
 
 let selectedDay = todayKey();
@@ -698,7 +745,8 @@ function loadState() {
     if (raw) {
       const loaded = JSON.parse(raw);
       // merge so new keys get defaults
-      state = Object.assign({ globalProt:150, globalGluc:250, globalLip:70 }, loaded);
+      state = Object.assign({ globalProt:150, globalGluc:250, globalLip:70, weights: [] }, loaded);
+      if (!Array.isArray(state.weights)) state.weights = [];
     }
   } catch(e) {}
 }
@@ -980,6 +1028,7 @@ function renderCharts() {
   });
 
   renderStats(data, avg);
+  renderWeightChart();
 }
 
 function renderStats(data, avg) {
@@ -1016,6 +1065,122 @@ function renderStats(data, avg) {
       <div class="stat-card-val">${totalDays}</div>
       <div class="stat-card-sub">depuis le début</div>
     </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// WEIGHT TRACKING
+// ═══════════════════════════════════════════════════════
+function renderWeightChart() {
+  const wrap = document.getElementById('weightChartWrap');
+  const emptyEl = document.getElementById('weightEmpty');
+  const labelsRow = document.getElementById('weightLabelsRow');
+  const lastInfoEl = document.getElementById('weightLastInfo');
+  const deltaEl = document.getElementById('weightDelta');
+  if (!wrap) return;
+
+  const weights = (state.weights || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!weights.length) {
+    wrap.style.display = 'none';
+    labelsRow.style.display = 'none';
+    emptyEl.style.display = 'block';
+    lastInfoEl.textContent = 'Aucune pesée enregistrée';
+    deltaEl.textContent = '';
+    return;
+  }
+
+  wrap.style.display = 'block';
+  labelsRow.style.display = 'flex';
+  emptyEl.style.display = 'none';
+
+  const shown = weights.slice(-20);
+  const vals = shown.map(w => w.value);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = (max - min) || 1;
+  const padY = range * 0.2;
+  const yMin = min - padY, yMax = max + padY;
+  const W = 320, H = 140, padX = 12;
+  const n = shown.length;
+  const stepX = n > 1 ? (W - padX * 2) / (n - 1) : 0;
+
+  const points = shown.map((w, i) => {
+    const x = n > 1 ? padX + i * stepX : W / 2;
+    const y = H - ((w.value - yMin) / (yMax - yMin)) * H;
+    return { x, y, w };
+  });
+
+  const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const areaD = pathD + ` L${points[points.length - 1].x.toFixed(1)},${H} L${points[0].x.toFixed(1)},${H} Z`;
+
+  const dotsHtml = points.map(p => {
+    const isLast = p === points[points.length - 1];
+    const dLabel = new Date(p.w.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${isLast ? 4.5 : 3.5}" fill="${isLast ? 'var(--accent)' : 'var(--accent3)'}" stroke="var(--surface)" stroke-width="2"><title>${dLabel} — ${p.w.value} kg</title></circle>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:140px;overflow:visible;">
+      <defs>
+        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent3)" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="var(--accent3)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaD}" fill="url(#weightGrad)" stroke="none"/>
+      <path d="${pathD}" fill="none" stroke="var(--accent3)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dotsHtml}
+    </svg>`;
+
+  document.getElementById('weightMaxLabel').textContent = `↑ ${max} kg`;
+  document.getElementById('weightMinLabel').textContent = `↓ ${min} kg`;
+
+  const last = weights[weights.length - 1];
+  const daysSince = Math.floor((new Date(todayKey() + 'T00:00:00') - new Date(last.date + 'T00:00:00')) / 86400000);
+  let dayLabel;
+  if (daysSince <= 0) dayLabel = "aujourd'hui";
+  else if (daysSince === 1) dayLabel = 'il y a 1 jour';
+  else dayLabel = `il y a ${daysSince} jours`;
+  lastInfoEl.innerHTML = `Dernier poids : <strong style="color:var(--text);">${last.value} kg</strong> · <span style="color:${daysSince > 7 ? 'var(--accent2)' : 'var(--text2)'}">${dayLabel}</span>`;
+
+  if (weights.length > 1) {
+    const first = weights[0];
+    const diff = Math.round((last.value - first.value) * 10) / 10;
+    const sign = diff > 0 ? '+' : '';
+    const color = diff > 0 ? 'var(--accent2)' : diff < 0 ? 'var(--accent)' : 'var(--text3)';
+    deltaEl.innerHTML = `<span style="color:${color};font-weight:800;">${sign}${diff} kg</span> depuis la première pesée`;
+  } else {
+    deltaEl.textContent = '';
+  }
+}
+
+function openWeightModal() {
+  document.getElementById('inputWeightDate').value = todayKey();
+  document.getElementById('inputWeightValue').value = '';
+  document.getElementById('errWeight').classList.remove('show');
+  openModal('weightModal');
+}
+
+function saveWeight() {
+  const date = document.getElementById('inputWeightDate').value;
+  const value = parseFloat(document.getElementById('inputWeightValue').value);
+  const err = document.getElementById('errWeight');
+
+  if (!date || isNaN(value) || value <= 0 || value > 500) {
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+
+  if (!state.weights) state.weights = [];
+  const existing = state.weights.find(w => w.date === date);
+  if (existing) existing.value = value;
+  else state.weights.push({ date, value });
+
+  saveState();
+  closeModal('weightModal');
+  renderWeightChart();
+  showToast('⚖️ Poids enregistré');
 }
 
 function calcStreak() {
