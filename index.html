@@ -35,6 +35,19 @@
     --font-display: 'Syne', sans-serif;
     --font-body: 'DM Sans', sans-serif;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --wallpaper: none;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image: var(--wallpaper);
+    background-size: cover;
+    background-position: center center;
+    opacity: 0.22;
+    pointer-events: none;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -321,6 +334,17 @@
   .export-btn:active { transform: scale(0.98); }
   .export-btn.primary { background: rgba(200,245,66,0.1); border-color: rgba(200,245,66,0.3); color: var(--accent); }
 
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .settings-card-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+  .tiny-btn { width: 100%; padding: 12px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-display); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .db-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .db-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .db-item-name { font-family: var(--font-display); font-size: 12px; font-weight: 700; }
+  .db-item-meta { font-size: 11px; color: var(--text3); }
+  .db-item-delete { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.25); color: var(--accent2); border-radius: 8px; padding: 6px 10px; font-size: 11px; cursor: pointer; }
+  .select-inline { width: 100%; background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-top: 8px; }
+
   /* TOAST */
   .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 12px 20px; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text); z-index: 500; opacity: 0; transition: all 0.3s; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -519,11 +543,142 @@
       <button class="btn-save" style="width:100%;border-radius:10px;" onclick="saveGlobalMacros()">Enregistrer les objectifs</button>
     </div>
 
+    <div class="settings-grid">
+      <div class="settings-card">
+        <div class="settings-card-title">🎯 Phase</div>
+        <select class="select-inline" id="phaseSelect" onchange="applyPresetTheme(this.value)">
+          <option value="maintenance">Maintenance</option>
+          <option value="dry">Sèche</option>
+          <option value="surplus">Surplus</option>
+        </select>
+      </div>
+      <div class="settings-card">
+        <div class="settings-card-title">🎨 Palette</div>
+        <button class="tiny-btn" onclick="resetCustomTheme()">Réinitialiser la palette</button>
+      </div>
+    </div>
+
+    <div class="bar-wrap" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Couleurs et graphiques</div>
+      <div class="macro-settings-row">
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl" style="color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Accent</div>
+          <input type="color" class="form-input" id="themeAccentInput" style="height:45px;padding:6px;cursor:pointer;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl" style="color:var(--accent2)"><span class="dot" style="background:var(--accent2)"></span>Danger</div>
+          <input type="color" class="form-input" id="themeAccent2Input" style="height:45px;padding:6px;cursor:pointer;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl" style="color:var(--accent3)"><span class="dot" style="background:var(--accent3)"></span>Bleu</div>
+          <input type="color" class="form-input" id="themeAccent3Input" style="height:45px;padding:6px;cursor:pointer;">
+        </div>
+      </div>
+      <button class="btn-save" style="width:100%;border-radius:10px;" onclick="saveCustomTheme()">Appliquer les couleurs</button>
+    </div>
+
+    <div class="bar-wrap" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Fond d'écran</div>
+      <label class="tiny-btn" style="display:block; text-align:center; margin-bottom:10px;">
+        <input type="file" accept="image/*" id="wallpaperInput" style="display:none;" onchange="handleWallpaperUpload(this.files)">
+        Choisir depuis la galerie
+      </label>
+      <div style="font-size:11px;color:var(--text3);">Dimensions recommandées : 1080×1920 ou 1200×2000 pour un rendu optimal.</div>
+      <div id="wallpaperMeta" style="margin-top:10px;font-size:11px;color:var(--text2);">Aucun fond d'écran appliqué.</div>
+      <button class="btn-cancel" style="width:100%;margin-top:10px;" onclick="clearWallpaper()">Supprimer le fond d'écran</button>
+    </div>
+
+    <div class="bar-wrap" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;">Métabolisme de base</div>
+      <div class="macro-settings-row" style="grid-template-columns:1fr 1fr;">
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Sexe</div>
+          <select class="select-inline" id="bmrSexInput">
+            <option value="female">Femme</option>
+            <option value="male">Homme</option>
+          </select>
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Âge</div>
+          <input type="number" class="form-input" id="bmrAgeInput" min="10" max="90" style="padding:12px 10px;text-align:center;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Taille (cm)</div>
+          <input type="number" class="form-input" id="bmrHeightInput" min="120" max="230" style="padding:12px 10px;text-align:center;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Poids (kg)</div>
+          <input type="number" class="form-input" id="bmrWeightInput" min="30" max="220" step="0.1" style="padding:12px 10px;text-align:center;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Activité</div>
+          <select class="select-inline" id="bmrActivityInput">
+            <option value="1.2">Sédentaire</option>
+            <option value="1.375">Légère</option>
+            <option value="1.55">Modérée</option>
+            <option value="1.725">Élevée</option>
+            <option value="1.9">Très élevée</option>
+          </select>
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Course (km/sem)</div>
+          <input type="number" class="form-input" id="bmrRunningInput" min="0" max="200" style="padding:12px 10px;text-align:center;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">Muscu (x/sem)</div>
+          <input type="number" class="form-input" id="bmrGymInput" min="0" max="14" style="padding:12px 10px;text-align:center;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl">NEAT (pas/jour)</div>
+          <input type="number" class="form-input" id="bmrNeatInput" min="0" max="100000" style="padding:12px 10px;text-align:center;">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button class="btn-save" style="flex:1;border-radius:10px;" onclick="saveBmrSettings()">Enregistrer</button>
+        <button class="btn-cancel" style="flex:1;border-radius:10px;" onclick="calculateBmrEstimate()">Calculer</button>
+      </div>
+      <div id="bmrResult" style="margin-top:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px; font-size:12px; color:var(--text2); line-height:1.6;">Aucun calcul encore effectué.</div>
+    </div>
+
+    <div class="bar-wrap" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;">Base de données aliments</div>
+      <div class="settings-grid">
+        <div class="settings-card">
+          <div class="settings-card-title">Poids (100g)</div>
+          <input type="text" class="form-input" id="foodWeightName" placeholder="Ex: Riz blanc" style="margin-bottom:8px;">
+          <input type="number" class="form-input" id="foodWeightCal" placeholder="Calories / 100g" min="0" step="1" style="margin-bottom:8px;">
+          <div class="macro-settings-row" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:8px;">
+            <input type="number" class="form-input" id="foodWeightProt" placeholder="P" style="padding:8px 6px;text-align:center;">
+            <input type="number" class="form-input" id="foodWeightGluc" placeholder="G" style="padding:8px 6px;text-align:center;">
+            <input type="number" class="form-input" id="foodWeightLip" placeholder="L" style="padding:8px 6px;text-align:center;">
+          </div>
+          <button class="tiny-btn" onclick="addFoodItem('weight')">Ajouter à la base poids</button>
+          <div id="foodWeightList" class="db-list"></div>
+        </div>
+        <div class="settings-card">
+          <div class="settings-card-title">Unité</div>
+          <input type="text" class="form-input" id="foodUnitName" placeholder="Ex: Œuf" style="margin-bottom:8px;">
+          <input type="number" class="form-input" id="foodUnitCal" placeholder="Calories / unité" min="0" step="1" style="margin-bottom:8px;">
+          <div class="macro-settings-row" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:8px;">
+            <input type="number" class="form-input" id="foodUnitProt" placeholder="P" style="padding:8px 6px;text-align:center;">
+            <input type="number" class="form-input" id="foodUnitGluc" placeholder="G" style="padding:8px 6px;text-align:center;">
+            <input type="number" class="form-input" id="foodUnitLip" placeholder="L" style="padding:8px 6px;text-align:center;">
+          </div>
+          <button class="tiny-btn" onclick="addFoodItem('unit')">Ajouter à la base unité</button>
+          <div id="foodUnitList" class="db-list"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="section-divider"></div>
     <div class="section-header" style="padding:0 0 12px;">
-      <div class="section-title">📤 Export</div>
+      <div class="section-title">📤 Import / Export</div>
     </div>
     <div class="export-section" style="padding:0;">
+      <label class="export-btn primary" style="cursor:pointer;">
+        <input type="file" accept=".csv,text/csv" id="csvImportInput" style="display:none;" onchange="importCSVFromFile(this.files)">
+        📥 Importer depuis CSV
+      </label>
       <button class="export-btn primary" onclick="exportCSV()">📄 Exporter en CSV</button>
       <button class="export-btn" onclick="clearAllData()">🗑️ Effacer toutes les données</button>
     </div>
@@ -567,6 +722,25 @@
     <div class="form-group">
       <label class="form-label">Description</label>
       <input type="text" class="form-input" id="inputDesc" placeholder="Ex: Café, tartines, yaourt…" maxlength="80">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Source de l'aliment</label>
+      <select class="select-inline" id="entrySourceSelect" onchange="toggleFoodSourceUI()">
+        <option value="manual">Saisie manuelle</option>
+        <option value="weight">Base par poids (100g)</option>
+        <option value="unit">Base par unité</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="foodSourceBlock" style="display:none;">
+      <label class="form-label">Choisir un aliment</label>
+      <select class="select-inline" id="foodSourceSelect"></select>
+      <div id="foodSourceQtyRow" style="margin-top:10px; display:none;">
+        <label class="form-label">Quantité</label>
+        <input type="number" class="form-input" id="foodSourceQty" placeholder="Ex: 150" min="0" step="0.1">
+      </div>
+      <button class="tiny-btn" style="margin-top:10px;" onclick="applySelectedFoodToEntry()">Utiliser cet aliment</button>
     </div>
 
     <!-- Calories -->
@@ -713,7 +887,7 @@
 // STATE & STORAGE
 // ═══════════════════════════════════════════════════════
 const STORAGE_KEY = 'kcaltrack_v3';
-const EMOJIS = ['🍳','🥗','🍔','🍕','🍣','🥩','🥦','🍜','☕','🧃','🍎','🍰','🥪','🌮','🍱','🍚'];
+const EMOJIS = ['🍳','🥗','🍔','🍕','🍣','🥩','🥦','🍜','☕','🧃','🍎','🍰','🥪','🌮','🍱','🍚','🥑','🍋','🍗','🍝','🥥','🍉','🍇','🥤','🥙','🍣','🥯','🍲','🧁','🌽','🍠','🍅','🍊','🍏','🥚','🥜','🍤','🍛','🍙','🍘','🍪'];
 const COLORS = ['#c8f542','#ff6b6b','#6bc5ff','#ffb347','#a78bfa','#34d399'];
 const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const MONTHS_FR = ['janv','févr','mars','avr','mai','juin','juil','août','sept','oct','nov','déc'];
@@ -723,9 +897,17 @@ let state = {
   globalProt: 150,
   globalGluc: 250,
   globalLip: 70,
+  phase: 'maintenance',
+  theme: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' },
+  wallpaper: { dataUrl: '', label: '', width: '', height: '' },
+  bmr: { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' },
+  foodDb: {
+    weight: [],
+    unit: []
+  },
   days: {},
   weights: []
-  // days[key]: { limit, macroP?, macroG?, macroL?, note, entries:[{id,emoji,title,desc,cal,prot?,gluc?,lip?}] }
+  // days[key]: { limit, macroP?, macroG?, macroL?, note, entries:[{id,emoji,title,desc,cal,prot?,gluc?,lip?, source?, foodId?}] }
   // weights: [{ date:'YYYY-MM-DD', value: 72.4 }]
 };
 
@@ -744,15 +926,78 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const loaded = JSON.parse(raw);
-      // merge so new keys get defaults
-      state = Object.assign({ globalProt:150, globalGluc:250, globalLip:70, weights: [] }, loaded);
+      state = Object.assign({
+        globalLimit: 2000,
+        globalProt: 150,
+        globalGluc: 250,
+        globalLip: 70,
+        phase: 'maintenance',
+        theme: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' },
+        wallpaper: { dataUrl: '', label: '', width: '', height: '' },
+        bmr: { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' },
+        foodDb: { weight: [], unit: [] },
+        days: {},
+        weights: []
+      }, loaded);
       if (!Array.isArray(state.weights)) state.weights = [];
+      if (!state.foodDb || !state.foodDb.weight) state.foodDb = { weight: [], unit: [] };
+      if (!state.theme) state.theme = { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' };
+      if (!state.wallpaper) state.wallpaper = { dataUrl: '', label: '', width: '', height: '' };
+      if (!state.bmr) state.bmr = { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' };
     }
   } catch(e) {}
 }
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function applyThemeSettings() {
+  const theme = state.theme || {};
+  const root = document.documentElement;
+  root.style.setProperty('--bg', theme.bg || '#0a0a0f');
+  root.style.setProperty('--surface', theme.surface || '#13131c');
+  root.style.setProperty('--surface2', theme.surface2 || '#1c1c2e');
+  root.style.setProperty('--text', theme.text || '#f0f0f8');
+  root.style.setProperty('--accent', theme.accent || '#c8f542');
+  root.style.setProperty('--accent2', theme.accent2 || '#ff6b6b');
+  root.style.setProperty('--accent3', theme.accent3 || '#6bc5ff');
+  root.style.setProperty('--accent4', theme.accent4 || '#ffb347');
+
+  const phaseThemes = {
+    dry: { accent: '#a7f3d0', accent2: '#fca5a5', accent3: '#7dd3fc', accent4: '#fcd34d', bg: '#0c1214', surface: '#141d1d', surface2: '#1b2a2d', text: '#e8f7f6' },
+    surplus: { accent: '#ffd166', accent2: '#ff7b7b', accent3: '#7cc7ff', accent4: '#fdba74', bg: '#130f16', surface: '#1e1820', surface2: '#2d2130', text: '#f6e9ff' },
+    maintenance: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' }
+  };
+  const phaseMap = phaseThemes[state.phase] || phaseThemes.maintenance;
+  if (!theme.customized) {
+    Object.assign(theme, phaseMap);
+  }
+  const finalTheme = { ...phaseMap, ...theme };
+  Object.assign(state.theme, finalTheme);
+  Object.entries(finalTheme).forEach(([key, value]) => root.style.setProperty('--' + key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()), value));
+
+  if (state.wallpaper && state.wallpaper.dataUrl) {
+    document.documentElement.style.setProperty('--wallpaper', 'url("' + state.wallpaper.dataUrl + '")');
+  } else {
+    document.documentElement.style.setProperty('--wallpaper', 'none');
+  }
+}
+
+function applyPresetTheme(phase) {
+  state.phase = phase;
+  state.bmr = { ...(state.bmr || {}), goal: phase };
+  const preset = {
+    dry: { accent: '#a7f3d0', accent2: '#fca5a5', accent3: '#7dd3fc', accent4: '#fcd34d', bg: '#0c1214', surface: '#141d1d', surface2: '#1b2a2d', text: '#e8f7f6' },
+    surplus: { accent: '#ffd166', accent2: '#ff7b7b', accent3: '#7cc7ff', accent4: '#fdba74', bg: '#130f16', surface: '#1e1820', surface2: '#2d2130', text: '#f6e9ff' },
+    maintenance: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' }
+  }[phase] || {
+    accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8'
+  };
+  state.theme = { ...state.theme, ...preset, customized: false };
+  saveState();
+  applyThemeSettings();
+  renderSettings();
 }
 
 function getDay(key) {
@@ -805,10 +1050,7 @@ function switchView(view) {
   } else if (view === 'settings') {
     document.getElementById('viewSettings').classList.add('active');
     document.getElementById('navSettings').classList.add('active');
-    document.getElementById('globalLimitInput').value = state.globalLimit;
-    document.getElementById('globalProtInput').value  = state.globalProt;
-    document.getElementById('globalGlucInput').value  = state.globalGluc;
-    document.getElementById('globalLipInput').value   = state.globalLip;
+    renderSettings();
   }
 }
 
@@ -1210,15 +1452,18 @@ function openAddModal() {
   editingEntryId = null;
   document.getElementById('modalTitle').textContent = 'Ajouter un repas';
   ['inputTitle','inputDesc','inputCal','inputProt','inputGluc','inputLip',
-   'calcPer100','calcQty','mCalcP100','mCalcG100','mCalcL100'].forEach(id => {
+   'calcPer100','calcQty','mCalcP100','mCalcG100','mCalcL100','foodSourceQty'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  document.getElementById('entrySourceSelect').value = 'manual';
+  document.getElementById('foodSourceBlock').style.display = 'none';
   document.getElementById('calcResult').textContent = '—';
   document.getElementById('calcApplyBtn').classList.remove('visible');
   document.getElementById('macroCalcResults').classList.remove('visible');
   ['errTitle','errCal'].forEach(id => document.getElementById(id).classList.remove('show'));
   selectedEmoji = EMOJIS[0];
   renderEmojiRow();
+  renderFoodSourceSelect();
   openModal('entryModal');
   setTimeout(() => document.getElementById('inputTitle').focus(), 400);
 }
@@ -1235,11 +1480,14 @@ function editEntry(id) {
   document.getElementById('inputProt').value  = entry.prot != null ? entry.prot : '';
   document.getElementById('inputGluc').value  = entry.gluc != null ? entry.gluc : '';
   document.getElementById('inputLip').value   = entry.lip  != null ? entry.lip  : '';
-  ['mCalcP100','mCalcG100','mCalcL100'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('entrySourceSelect').value = 'manual';
+  document.getElementById('foodSourceBlock').style.display = 'none';
+  ['mCalcP100','mCalcG100','mCalcL100','foodSourceQty'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('macroCalcResults').classList.remove('visible');
   ['errTitle','errCal'].forEach(id => document.getElementById(id).classList.remove('show'));
   selectedEmoji = entry.emoji;
   renderEmojiRow();
+  renderFoodSourceSelect();
   openModal('entryModal');
 }
 
@@ -1412,6 +1660,323 @@ function saveGlobalMacros() {
   showToast('✅ Objectifs macros enregistrés');
 }
 
+function renderSettings() {
+  const phaseSelect = document.getElementById('phaseSelect');
+  if (phaseSelect) phaseSelect.value = state.phase || 'maintenance';
+
+  const theme = state.theme || {};
+  document.getElementById('themeAccentInput').value = theme.accent || '#c8f542';
+  document.getElementById('themeAccent2Input').value = theme.accent2 || '#ff6b6b';
+  document.getElementById('themeAccent3Input').value = theme.accent3 || '#6bc5ff';
+
+  const bmr = state.bmr || {};
+  document.getElementById('bmrSexInput').value = bmr.sex || 'female';
+  document.getElementById('bmrAgeInput').value = bmr.age || 28;
+  document.getElementById('bmrHeightInput').value = bmr.height || 170;
+  document.getElementById('bmrWeightInput').value = bmr.weight || 68;
+  document.getElementById('bmrActivityInput').value = String(bmr.activity || 1.375);
+  document.getElementById('bmrRunningInput').value = bmr.runningKm || 0;
+  document.getElementById('bmrGymInput').value = bmr.gymSessions || 0;
+  document.getElementById('bmrNeatInput').value = bmr.neat || 250;
+
+  const wallpaperMeta = document.getElementById('wallpaperMeta');
+  if (wallpaperMeta) {
+    wallpaperMeta.textContent = state.wallpaper && state.wallpaper.dataUrl
+      ? `Actif : ${state.wallpaper.label || 'image'} • ${state.wallpaper.width || '?'} × ${state.wallpaper.height || '?'}`
+      : 'Aucun fond d\'écran appliqué.';
+  }
+
+  const globalLimitInput = document.getElementById('globalLimitInput');
+  if (globalLimitInput) {
+    globalLimitInput.value = state.globalLimit;
+    document.getElementById('globalProtInput').value = state.globalProt;
+    document.getElementById('globalGlucInput').value = state.globalGluc;
+    document.getElementById('globalLipInput').value = state.globalLip;
+  }
+
+  renderFoodDatabaseLists();
+  const result = document.getElementById('bmrResult');
+  if (result && (!result.dataset.ready || !result.dataset.calculated)) {
+    result.innerHTML = 'BMR non calculé. Remplissez les paramètres et appuyez sur <strong>Calculer</strong>.';
+  }
+  renderFoodSourceSelect();
+}
+
+function saveCustomTheme() {
+  const accent = document.getElementById('themeAccentInput').value;
+  const accent2 = document.getElementById('themeAccent2Input').value;
+  const accent3 = document.getElementById('themeAccent3Input').value;
+  state.theme = { ...(state.theme || {}), accent, accent2, accent3, customized: true };
+  saveState();
+  applyThemeSettings();
+  showToast('✅ Palette appliquée');
+}
+
+function resetCustomTheme() {
+  state.theme = { ...(state.theme || {}), customized: false };
+  applyPresetTheme(state.phase || 'maintenance');
+}
+
+function handleWallpaperUpload(files) {
+  const file = files && files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      state.wallpaper = { dataUrl: e.target.result, label: file.name, width: img.width, height: img.height };
+      saveState();
+      applyThemeSettings();
+      renderSettings();
+      showToast('🖼️ Fond d\'écran ajouté');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearWallpaper() {
+  state.wallpaper = { dataUrl: '', label: '', width: '', height: '' };
+  saveState();
+  applyThemeSettings();
+  renderSettings();
+  showToast('🧹 Fond d\'écran supprimé');
+}
+
+function calculateBmrEstimate() {
+  const sex = document.getElementById('bmrSexInput').value || state.bmr.sex;
+  const age = Number(document.getElementById('bmrAgeInput').value || state.bmr.age || 28);
+  const height = Number(document.getElementById('bmrHeightInput').value || state.bmr.height || 170);
+  const weight = Number(document.getElementById('bmrWeightInput').value || state.bmr.weight || 68);
+  const activity = Number(document.getElementById('bmrActivityInput').value || state.bmr.activity || 1.375);
+  const runningKm = Number(document.getElementById('bmrRunningInput').value || state.bmr.runningKm || 0);
+  const gymSessions = Number(document.getElementById('bmrGymInput').value || state.bmr.gymSessions || 0);
+  const neat = Number(document.getElementById('bmrNeatInput').value || state.bmr.neat || 2500);
+
+  if (!age || !height || !weight || age < 10 || height < 120 || weight < 30) {
+    showToast('❌ Remplissez les champs du métabolisme');
+    return;
+  }
+
+  // Mifflin-St Jeor = base métabolique réelle. Les dépenses NEAT, course et muscu
+  // sont ensuite ajoutées séparément pour une estimation plus réaliste du besoin journalier.
+  const bmr = (10 * weight) + (6.25 * height) - (5 * age) + (sex === 'male' ? 5 : -161);
+
+  // NEAT = moyenne de pas/jour * ~0.04 kcal / pas.
+  const neatCalories = neat * 0.04;
+
+  // Course à pied = kcal/km estimées selon le poids corporel, ramenées à une moyenne journalière.
+  const runningKcalPerKm = weight * 0.9;
+  const runningDailyAdd = (runningKm * runningKcalPerKm) / 7;
+
+  // Séance de muscu = ~1h d'activité modérée, prise comme dépense moyenne hebdo.
+  const gymKcalPerSession = Math.max(180, weight * 3.5);
+  const gymDailyAdd = (gymSessions * gymKcalPerSession) / 7;
+
+  // Le coefficient d'activité global n'est pas appliqué ici : la dépense est répartie
+  // de façon explicite entre NEAT, course et muscu, ce qui évite surestimation.
+  const maintenance = bmr + neatCalories + runningDailyAdd + gymDailyAdd;
+  const dry = maintenance - 300;
+  const surplus = maintenance + 250;
+
+  state.bmr = { sex, age, height, weight, activity, runningKm, gymSessions, neat, goal: state.bmr.goal || 'maintenance' };
+  const goal = state.bmr.goal || 'maintenance';
+  const resultText = `BMR : <strong>${Math.round(bmr)} kcal/j</strong><br>
+    NEAT : <strong>${Math.round(neatCalories)} kcal/j</strong> · Course : <strong>${Math.round(runningDailyAdd)} kcal/j</strong><br>
+    Muscu : <strong>${Math.round(gymDailyAdd)} kcal/j</strong><br>
+    Maintenance : <strong>${Math.round(maintenance)} kcal/j</strong><br>
+    Sèche : <strong>${Math.round(dry)} kcal/j</strong> · Surplus : <strong>${Math.round(surplus)} kcal/j</strong><br>
+    Objectif actuel : <strong>${goal === 'dry' ? 'Sèche' : goal === 'surplus' ? 'Surplus' : 'Maintenance'}</strong>`;
+  document.getElementById('bmrResult').innerHTML = resultText;
+  document.getElementById('bmrResult').dataset.ready = 'true';
+  document.getElementById('bmrResult').dataset.calculated = 'true';
+  saveState();
+  return { bmr, maintenance, dry, surplus, neatCalories, runningDailyAdd, gymDailyAdd };
+}
+
+function saveBmrSettings() {
+  const bmr = {
+    sex: document.getElementById('bmrSexInput').value,
+    age: Number(document.getElementById('bmrAgeInput').value),
+    height: Number(document.getElementById('bmrHeightInput').value),
+    weight: Number(document.getElementById('bmrWeightInput').value),
+    activity: Number(document.getElementById('bmrActivityInput').value),
+    runningKm: Number(document.getElementById('bmrRunningInput').value),
+    gymSessions: Number(document.getElementById('bmrGymInput').value),
+    neat: Number(document.getElementById('bmrNeatInput').value),
+    goal: state.bmr.goal || 'maintenance'
+  };
+  state.bmr = bmr;
+  saveState();
+  const calc = calculateBmrEstimate();
+  if (calc) {
+    state.globalLimit = Math.round(calc.maintenance);
+    document.getElementById('globalLimitInput').value = state.globalLimit;
+    saveState();
+  }
+  showToast('✅ Métabolisme enregistré');
+}
+
+function renderFoodDatabaseLists() {
+  const weightList = document.getElementById('foodWeightList');
+  const unitList = document.getElementById('foodUnitList');
+  if (!weightList || !unitList) return;
+
+  const renderItems = (items, container, type) => {
+    container.innerHTML = '';
+    if (!items.length) {
+      container.innerHTML = '<div class="db-item-meta">Aucun aliment enregistré.</div>';
+      return;
+    }
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'db-item';
+      row.innerHTML = `
+        <div>
+          <div class="db-item-name">${escHtml(item.name)}</div>
+          <div class="db-item-meta">${item.cal} kcal · P ${item.prot ?? 0}g · G ${item.gluc ?? 0}g · L ${item.lip ?? 0}g</div>
+        </div>
+        <button class="db-item-delete" onclick="removeFoodItem('${type}', '${item.id}')">Suppr.</button>`;
+      container.appendChild(row);
+    });
+  };
+
+  renderItems(state.foodDb.weight || [], weightList, 'weight');
+  renderItems(state.foodDb.unit || [], unitList, 'unit');
+}
+
+function addFoodItem(type) {
+  const nameInput = type === 'weight' ? document.getElementById('foodWeightName') : document.getElementById('foodUnitName');
+  const calInput = type === 'weight' ? document.getElementById('foodWeightCal') : document.getElementById('foodUnitCal');
+  const protInput = type === 'weight' ? document.getElementById('foodWeightProt') : document.getElementById('foodUnitProt');
+  const glucInput = type === 'weight' ? document.getElementById('foodWeightGluc') : document.getElementById('foodUnitGluc');
+  const lipInput = type === 'weight' ? document.getElementById('foodWeightLip') : document.getElementById('foodUnitLip');
+
+  const name = nameInput.value.trim();
+  const cal = Number(calInput.value);
+  if (!name || !Number.isFinite(cal) || cal < 0) {
+    showToast('❌ Nom et calories requis');
+    return;
+  }
+  const item = {
+    id: uid(),
+    name,
+    cal,
+    prot: protInput.value === '' ? null : Number(protInput.value),
+    gluc: glucInput.value === '' ? null : Number(glucInput.value),
+    lip: lipInput.value === '' ? null : Number(lipInput.value)
+  };
+  if (!state.foodDb) state.foodDb = { weight: [], unit: [] };
+  state.foodDb[type].push(item);
+  saveState();
+  nameInput.value = ''; calInput.value = ''; protInput.value = ''; glucInput.value = ''; lipInput.value = '';
+  renderFoodDatabaseLists();
+  renderFoodSourceSelect();
+  showToast('✅ Aliment ajouté');
+}
+
+function removeFoodItem(type, id) {
+  state.foodDb[type] = (state.foodDb[type] || []).filter(item => item.id !== id);
+  saveState();
+  renderFoodDatabaseLists();
+  renderFoodSourceSelect();
+  showToast('🗑️ Aliment retiré');
+}
+
+function renderFoodSourceSelect() {
+  const select = document.getElementById('foodSourceSelect');
+  if (!select) return;
+  const source = document.getElementById('entrySourceSelect')?.value || 'manual';
+  if (source === 'manual') {
+    select.innerHTML = '<option value="">Aucune base</option>';
+    return;
+  }
+  const arr = source === 'weight' ? (state.foodDb.weight || []) : (state.foodDb.unit || []);
+  select.innerHTML = arr.length
+    ? arr.map(item => `<option value="${item.id}">${escHtml(item.name)}</option>`).join('')
+    : '<option value="">Aucun aliment enregistré</option>';
+  if (!arr.length) document.getElementById('foodSourceQtyRow').style.display = 'none';
+}
+
+function toggleFoodSourceUI() {
+  const source = document.getElementById('entrySourceSelect').value;
+  const block = document.getElementById('foodSourceBlock');
+  const qtyRow = document.getElementById('foodSourceQtyRow');
+  const isFood = source === 'weight' || source === 'unit';
+  block.style.display = isFood ? 'block' : 'none';
+  qtyRow.style.display = source === 'weight' || source === 'unit' ? 'block' : 'none';
+  renderFoodSourceSelect();
+}
+
+function applySelectedFoodToEntry() {
+  const source = document.getElementById('entrySourceSelect').value;
+  const select = document.getElementById('foodSourceSelect');
+  const qtyValue = Number(document.getElementById('foodSourceQty').value);
+  const item = (source === 'weight' ? (state.foodDb.weight || []) : (state.foodDb.unit || [])).find(entry => entry.id === select.value);
+  if (!item) {
+    showToast('❌ Sélectionnez un aliment');
+    return;
+  }
+  const qty = source === 'unit' ? (Number.isFinite(qtyValue) && qtyValue > 0 ? qtyValue : 1) : (Number.isFinite(qtyValue) && qtyValue > 0 ? qtyValue : 100);
+  const scale = source === 'weight' ? qty / 100 : qty;
+  document.getElementById('inputTitle').value = item.name;
+  document.getElementById('inputDesc').value = source === 'weight' ? `${qty} g` : `${qty} ${qty > 1 ? 'unités' : 'unité'}`;
+  document.getElementById('inputCal').value = Math.round((item.cal || 0) * scale);
+  document.getElementById('inputProt').value = item.prot != null ? Math.round((item.prot || 0) * scale) : '';
+  document.getElementById('inputGluc').value = item.gluc != null ? Math.round((item.gluc || 0) * scale) : '';
+  document.getElementById('inputLip').value = item.lip != null ? Math.round((item.lip || 0) * scale) : '';
+  document.getElementById('errTitle').classList.remove('show');
+  document.getElementById('errCal').classList.remove('show');
+  showToast('✅ Aliment ajouté au formulaire');
+}
+
+function importCSVFromFile(files) {
+  const file = files && files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) {
+        showToast('❌ CSV vide ou invalide');
+        return;
+      }
+      const header = lines[0].split(',').map(v => v.trim().toLowerCase());
+      const result = [];
+      lines.slice(1).forEach(line => {
+        const cells = line.match(/(?:"[^"]*"|[^,]+)/g) || [];
+        const row = cells.map(v => v.replace(/^"|"$/g, '').trim());
+        if (!row.length) return;
+        const obj = {};
+        header.forEach((key, idx) => { obj[key] = row[idx] || ''; });
+        if (!obj.date && !obj.titre && !obj.title) return;
+        result.push(obj);
+      });
+      let imported = 0;
+      result.forEach(item => {
+        const date = item.date || item['date'] || todayKey();
+        const title = item.titre || item.title || 'CSV import';
+        const desc = item.description || item.desc || '';
+        const cal = Number(item.calories || item.kcal || item.cal || 0);
+        const prot = item['proteines (g)'] || item.proteines || item.prot || '';
+        const gluc = item['glucides (g)'] || item.glucides || item.gluc || '';
+        const lip = item['lipides (g)'] || item.lipides || item.lip || '';
+        if (!date || !Number.isFinite(cal) || cal <= 0) return;
+        const day = getDay(date);
+        day.entries.push({ id: uid(), emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], title, desc, cal, prot: prot !== '' ? Number(prot) : null, gluc: gluc !== '' ? Number(gluc) : null, lip: lip !== '' ? Number(lip) : null, source: 'csv' });
+        imported++;
+      });
+      saveState();
+      renderAll();
+      showToast(`✅ ${imported} repas importés`);
+    } catch (error) {
+      showToast('❌ CSV introuvable ou invalide');
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
 function renderEmojiRow() {
   const row = document.getElementById('emojiRow');
   row.innerHTML = '';
@@ -1489,7 +2054,9 @@ function renderAll() {
 // INIT
 // ═══════════════════════════════════════════════════════
 loadState();
+applyThemeSettings();
 renderEmojiRow();
+renderSettings();
 renderAll();
 
 setInterval(() => {
