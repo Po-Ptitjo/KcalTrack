@@ -25,7 +25,7 @@ self.addEventListener('install', event => {
 // Activate: clean only OLD kcaltrack caches, leave other apps alone
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>&
+    caches.keys().then(keys =>
       Promise.all(
         keys
           .filter(k => k.startsWith('kcaltrack-') && k !== CACHE_NAME)
@@ -34,6 +34,19 @@ self.addEventListener('activate', event => {
     )
   );
   self.clients.claim();
+});
+
+// Open the tracker when the daily progress notification is tapped.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (const client of windowClients) {
+        if ('focus' in client) return client.focus();
+      }
+      return self.clients.openWindow(BASE + '/index.html');
+    })
+  );
 });
 
 // Fetch: cache-first for local, network-first for external
