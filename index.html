@@ -641,6 +641,16 @@
     </div>
 
     <div class="bar-wrap" style="margin-bottom:16px;">
+      <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">🔔 Notification quotidienne Android</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:12px;">Affiche les calories et macros du jour dans le volet de notifications. Elle se met à jour quand les données changent ou quand vous rouvrez l’application. Sans serveur push, elle ne peut pas se mettre à jour quand l’application est fermée. Android peut aussi masquer les notifications selon ses réglages.</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-save" id="dailyNotificationEnable" style="flex:1;border-radius:10px;" onclick="enableDailyProgressNotification()">Activer</button>
+        <button class="btn-cancel" id="dailyNotificationDisable" style="flex:1;border-radius:10px;" onclick="disableDailyProgressNotification()">Désactiver</button>
+      </div>
+      <div id="dailyNotificationStatus" style="margin-top:10px;font-size:11px;color:var(--text2);"></div>
+    </div>
+
+    <div class="bar-wrap" style="margin-bottom:16px;">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;">Base de données aliments</div>
       <div class="settings-grid">
         <div class="settings-card">
@@ -901,6 +911,7 @@ let state = {
   theme: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' },
   wallpaper: { dataUrl: '', label: '', width: '', height: '' },
   bmr: { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' },
+  dailyNotificationEnabled: false,
   foodDb: {
     weight: [],
     unit: []
@@ -935,6 +946,7 @@ function loadState() {
         theme: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' },
         wallpaper: { dataUrl: '', label: '', width: '', height: '' },
         bmr: { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' },
+        dailyNotificationEnabled: false,
         foodDb: { weight: [], unit: [] },
         days: {},
         weights: []
@@ -950,6 +962,7 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleDailyProgressNotification();
 }
 
 function applyThemeSettings() {
@@ -1678,6 +1691,7 @@ function renderSettings() {
   document.getElementById('bmrRunningInput').value = bmr.runningKm || 0;
   document.getElementById('bmrGymInput').value = bmr.gymSessions || 0;
   document.getElementById('bmrNeatInput').value = bmr.neat || 250;
+  renderDailyNotificationStatus();
 
   const wallpaperMeta = document.getElementById('wallpaperMeta');
   if (wallpaperMeta) {
@@ -1700,6 +1714,111 @@ function renderSettings() {
     result.innerHTML = 'BMR non calculé. Remplissez les paramètres et appuyez sur <strong>Calculer</strong>.';
   }
   renderFoodSourceSelect();
+}
+
+let dailyNotificationUpdateTimer = null;
+let lastNotifiedDate = null;
+
+function renderDailyNotificationStatus() {
+  const status = document.getElementById('dailyNotificationStatus');
+  if (!status) return;
+  const supported = 'Notification' in window && 'serviceWorker' in navigator;
+  const enabled = state.dailyNotificationEnabled && supported && Notification.permission === 'granted';
+  document.getElementById('dailyNotificationEnable').disabled = enabled;
+  document.getElementById('dailyNotificationDisable').disabled = !state.dailyNotificationEnabled;
+  status.textContent = !supported
+    ? 'Notifications non prises en charge par ce navigateur.'
+    : enabled
+      ? 'Activée — les données du jour sont affichées dans le volet Android.'
+      : state.dailyNotificationEnabled && Notification.permission !== 'granted'
+        ? 'Autorisation manquante. Autorisez les notifications dans les réglages du navigateur.'
+        : 'Désactivée.';
+}
+
+async function enableDailyProgressNotification() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    showToast('❌ Notifications non prises en charge');
+    renderDailyNotificationStatus();
+    return;
+  }
+
+  try {
+    const permission = Notification.permission === 'default'
+      ? await Notification.requestPermission()
+      : Notification.permission;
+    if (permission !== 'granted') {
+      showToast('❌ Autorisez les notifications dans Android');
+      renderDailyNotificationStatus();
+      return;
+    }
+
+    state.dailyNotificationEnabled = true;
+    saveState();
+    renderDailyNotificationStatus();
+    clearTimeout(dailyNotificationUpdateTimer);
+    await updateDailyProgressNotification();
+    showToast('✅ Notification quotidienne activée');
+  } catch (error) {
+    console.error('Unable to enable daily progress notification:', error);
+    showToast('❌ Impossible d’activer la notification');
+    renderDailyNotificationStatus();
+  }
+}
+
+async function disableDailyProgressNotification() {
+  state.dailyNotificationEnabled = false;
+  saveState();
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      const notifications = await registration.getNotifications({ tag: 'kcaltrack-daily-progress' });
+      notifications.forEach(notification => notification.close());
+    }
+    renderDailyNotificationStatus();
+    showToast('🔕 Notification quotidienne désactivée');
+  } catch (error) {
+    console.error('Unable to close daily progress notification:', error);
+    renderDailyNotificationStatus();
+    showToast('❌ Impossible de fermer la notification');
+  }
+}
+
+function scheduleDailyProgressNotification() {
+  if (!state.dailyNotificationEnabled) return;
+  clearTimeout(dailyNotificationUpdateTimer);
+  dailyNotificationUpdateTimer = setTimeout(() => {
+    updateDailyProgressNotification().catch(error => console.error('Notification update failed:', error));
+  }, 250);
+}
+
+async function updateDailyProgressNotification() {
+  if (!state.dailyNotificationEnabled || !('Notification' in window) ||
+      Notification.permission !== 'granted' || !('serviceWorker' in navigator)) return;
+
+  const registration = await navigator.serviceWorker.ready;
+  const date = todayKey();
+  const day = state.days[date];
+  const calories = getTotalCal(date);
+  const limit = day && day.limit != null ? day.limit : state.globalLimit;
+  const macros = getTotalMacros(date);
+  const goals = getDayMacroGoals(date);
+  const progress = (value, goal) => goal > 0 ? Math.round((value / goal) * 100) : 0;
+  const body = [
+    `Calories : ${calories} / ${limit} kcal (${progress(calories, limit)} %)`,
+    `P ${macros.prot} / ${goals.prot} g (${progress(macros.prot, goals.prot)} %) · G ${macros.gluc} / ${goals.gluc} g (${progress(macros.gluc, goals.gluc)} %)`,
+    `L ${macros.lip} / ${goals.lip} g (${progress(macros.lip, goals.lip)} %)`
+  ].join('\n');
+
+  await registration.showNotification('KCalTrack — Aujourd’hui', {
+    body,
+    tag: 'kcaltrack-daily-progress',
+    renotify: false,
+    requireInteraction: true,
+    silent: true,
+    timestamp: Date.now(),
+    data: { date }
+  });
+  lastNotifiedDate = date;
 }
 
 function saveCustomTheme() {
@@ -2058,11 +2177,17 @@ applyThemeSettings();
 renderEmojiRow();
 renderSettings();
 renderAll();
+scheduleDailyProgressNotification();
 
 setInterval(() => {
   const newToday = todayKey();
   if (selectedDay !== newToday) { selectedDay = newToday; renderAll(); }
+  if (state.dailyNotificationEnabled && lastNotifiedDate !== newToday) scheduleDailyProgressNotification();
 }, 60000);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') scheduleDailyProgressNotification();
+});
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
