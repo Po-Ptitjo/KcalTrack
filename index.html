@@ -230,6 +230,12 @@
   .weight-chart-wrap { width: 100%; }
   .weight-chart-wrap svg circle { cursor: pointer; transition: r 0.15s; }
   .weight-chart-wrap svg circle:hover { r: 5; }
+  .weight-history { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .weight-history-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .weight-history-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; }
+  .weight-history-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 10px; background: var(--surface2); border-radius: 9px; font-size: 12px; }
+  .weight-history-date { color: var(--text2); }
+  .weight-history-value { color: var(--text); font-family: var(--font-display); font-weight: 800; }
   .weight-empty { display: none; text-align: center; font-size: 13px; color: var(--text3); padding: 30px 0; }
   .chart-avg-label { font-size: 12px; color: var(--text3); }
   .chart-avg-val { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--accent); }
@@ -493,6 +499,7 @@
         <span id="weightMinLabel"></span>
       </div>
       <div class="weight-chart-wrap" id="weightChartWrap"></div>
+      <div class="weight-history" id="weightHistory" style="display:none;"></div>
       <div class="weight-empty" id="weightEmpty">Aucune pesée enregistrée pour l'instant.</div>
       <div class="chart-avg" style="flex-direction:column;align-items:flex-start;gap:4px;">
         <span class="chart-avg-label" id="weightLastInfo">Aucune pesée enregistrée</span>
@@ -1327,6 +1334,7 @@ function renderStats(data, avg) {
 // ═══════════════════════════════════════════════════════
 function renderWeightChart() {
   const wrap = document.getElementById('weightChartWrap');
+  const historyEl = document.getElementById('weightHistory');
   const emptyEl = document.getElementById('weightEmpty');
   const labelsRow = document.getElementById('weightLabelsRow');
   const lastInfoEl = document.getElementById('weightLastInfo');
@@ -1337,6 +1345,10 @@ function renderWeightChart() {
 
   if (!weights.length) {
     wrap.style.display = 'none';
+    if (historyEl) {
+      historyEl.style.display = 'none';
+      historyEl.innerHTML = '';
+    }
     labelsRow.style.display = 'none';
     emptyEl.style.display = 'block';
     lastInfoEl.textContent = 'Aucune pesée enregistrée';
@@ -1347,6 +1359,7 @@ function renderWeightChart() {
   wrap.style.display = 'block';
   labelsRow.style.display = 'flex';
   emptyEl.style.display = 'none';
+  renderWeightHistory(weights, historyEl);
 
   const shown = weights.slice(-20);
   const vals = shown.map(w => w.value);
@@ -1407,6 +1420,38 @@ function renderWeightChart() {
   } else {
     deltaEl.textContent = '';
   }
+}
+
+function renderWeightHistory(weights, container) {
+  if (!container) return;
+  const title = document.createElement('div');
+  title.className = 'weight-history-title';
+  title.textContent = `Toutes les pesées (${weights.length})`;
+
+  const list = document.createElement('div');
+  list.className = 'weight-history-list';
+  weights.slice().reverse().forEach(measurement => {
+    const row = document.createElement('div');
+    row.className = 'weight-history-row';
+
+    const date = document.createElement('span');
+    date.className = 'weight-history-date';
+    date.textContent = new Date(measurement.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const value = document.createElement('span');
+    value.className = 'weight-history-value';
+    value.textContent = `${Number(measurement.value).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} kg`;
+
+    row.append(date, value);
+    list.appendChild(row);
+  });
+
+  container.replaceChildren(title, list);
+  container.style.display = 'block';
 }
 
 function openWeightModal() {
