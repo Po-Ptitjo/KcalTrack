@@ -642,7 +642,7 @@
 
     <div class="bar-wrap" style="margin-bottom:16px;">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">🔔 Notification quotidienne Android</div>
-      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:12px;">Affiche les calories et macros du jour dans le volet de notifications. Elle se met à jour quand les données changent ou quand vous rouvrez l’application. Sans serveur push, elle ne peut pas se mettre à jour quand l’application est fermée. Android peut aussi masquer les notifications selon ses réglages.</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:12px;">Affiche les calories consommées et restantes avec une jauge, ainsi que les protéines avec leur jauge. Elle se met à jour quand les données changent ou quand vous rouvrez l’application. Sans serveur push, elle ne peut pas se mettre à jour quand l’application est fermée. Android peut aussi masquer les notifications selon ses réglages.</div>
       <div style="display:flex;gap:10px;">
         <button class="btn-save" id="dailyNotificationEnable" style="flex:1;border-radius:10px;" onclick="enableDailyProgressNotification()">Activer</button>
         <button class="btn-cancel" id="dailyNotificationDisable" style="flex:1;border-radius:10px;" onclick="disableDailyProgressNotification()">Désactiver</button>
@@ -1791,6 +1791,12 @@ function scheduleDailyProgressNotification() {
   }, 250);
 }
 
+function formatNotificationProgress(value, goal, width = 10) {
+  const ratio = goal > 0 ? Math.max(0, Math.min(1, value / goal)) : 0;
+  const filled = Math.round(ratio * width);
+  return '▰'.repeat(filled) + '▱'.repeat(width - filled);
+}
+
 async function updateDailyProgressNotification() {
   if (!state.dailyNotificationEnabled || !('Notification' in window) ||
       Notification.permission !== 'granted' || !('serviceWorker' in navigator)) return;
@@ -1802,15 +1808,23 @@ async function updateDailyProgressNotification() {
   const limit = day && day.limit != null ? day.limit : state.globalLimit;
   const macros = getTotalMacros(date);
   const goals = getDayMacroGoals(date);
-  const progress = (value, goal) => goal > 0 ? Math.round((value / goal) * 100) : 0;
+  const remaining = Math.max(0, limit - calories);
+  const calorieStatus = calories > limit
+    ? `dépassé de ${Math.round(calories - limit)} kcal`
+    : `${Math.round(remaining)} kcal restantes`;
+  const protein = Math.round(macros.prot);
+  const proteinGoal = Math.round(goals.prot);
   const body = [
-    `Calories : ${calories} / ${limit} kcal (${progress(calories, limit)} %)`,
-    `P ${macros.prot} / ${goals.prot} g (${progress(macros.prot, goals.prot)} %) · G ${macros.gluc} / ${goals.gluc} g (${progress(macros.gluc, goals.gluc)} %)`,
-    `L ${macros.lip} / ${goals.lip} g (${progress(macros.lip, goals.lip)} %)`
+    `Calories : ${Math.round(calories)} / ${Math.round(limit)} kcal · ${calorieStatus}`,
+    formatNotificationProgress(calories, limit),
+    `Protéines : ${protein} / ${proteinGoal} g`,
+    formatNotificationProgress(protein, proteinGoal)
   ].join('\n');
 
   await registration.showNotification('KCalTrack — Aujourd’hui', {
     body,
+    icon: new URL('icons/icon-192.png', document.baseURI).href,
+    badge: new URL('icons/icon-72.png', document.baseURI).href,
     tag: 'kcaltrack-daily-progress',
     renotify: false,
     requireInteraction: true,

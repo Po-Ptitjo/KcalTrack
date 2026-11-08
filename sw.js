@@ -1,5 +1,5 @@
 // KCalTrack Service Worker v2.0
-const CACHE_NAME = 'kcaltrack-v9';
+const CACHE_NAME = 'kcaltrack-v10';
 const BASE = '/KcalTrack';
 const ASSETS = [
   BASE + '/',
