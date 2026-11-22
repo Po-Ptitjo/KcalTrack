@@ -167,8 +167,11 @@
   .limit-label { font-size: 12px; color: var(--text2); }
   .limit-edit-btn { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--accent); background: rgba(200,245,66,0.1); border: 1px solid rgba(200,245,66,0.2); border-radius: 20px; padding: 5px 14px; cursor: pointer; transition: all 0.15s; }
   .limit-edit-btn:active { transform: scale(0.95); }
-  .day-share-btn { width: 100%; margin-top: 12px; padding: 11px 14px; border: 1px solid rgba(107,197,255,0.25); border-radius: 12px; background: rgba(107,197,255,0.1); color: var(--accent3); font-family: var(--font-display); font-size: 12px; font-weight: 700; cursor: pointer; }
-  .day-share-btn:active { transform: scale(0.98); }
+  .day-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .day-action-btn { flex: 1; min-width: 0; padding: 11px 8px; border: 1px solid; border-radius: 12px; font-family: var(--font-display); font-size: 11px; font-weight: 700; cursor: pointer; }
+  .day-action-btn:active { transform: scale(0.98); }
+  .day-activity-btn { border-color: rgba(255,179,71,0.25); background: rgba(255,179,71,0.1); color: var(--accent4); }
+  .day-share-btn { border-color: rgba(107,197,255,0.25); background: rgba(107,197,255,0.1); color: var(--accent3); }
 
   /* DAY NOTE */
   .day-note-row { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; padding: 12px 14px; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border); }
@@ -451,7 +454,10 @@
         <span class="limit-label">Objectifs et activité du jour</span>
         <button class="limit-edit-btn" onclick="openLimitModal()">✏️ Modifier</button>
       </div>
-      <button class="day-share-btn" type="button" onclick="shareDay()">📤 Partager la journée</button>
+      <div class="day-actions">
+        <button class="day-action-btn day-activity-btn" type="button" onclick="openActivityModal()">🏃 Activité du jour</button>
+        <button class="day-action-btn day-share-btn" type="button" onclick="shareDay()">📤 Partager</button>
+      </div>
     </div>
   </div>
 
@@ -912,27 +918,34 @@
       <div style="font-size:11px;color:var(--text3);margin-top:6px;">Laisser vide pour utiliser les objectifs globaux.</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Activité du jour — optionnel</label>
-      <div class="macros-form-row" style="grid-template-columns:1fr 1fr;">
-        <div class="macro-form-field">
-          <label class="macro-form-label" for="inputDaySteps" style="color:var(--accent3)">Pas</label>
-          <input type="number" class="macro-form-input" id="inputDaySteps" placeholder="Ex: 8000" min="0" max="100000" step="1" inputmode="numeric">
-          <div class="error-msg" id="errDaySteps">Entrez un nombre de pas entre 0 et 100 000.</div>
-        </div>
-        <div class="macro-form-field">
-          <label class="macro-form-label" for="inputDayRunKm" style="color:var(--accent4)">Course (km)</label>
-          <input type="number" class="macro-form-input" id="inputDayRunKm" placeholder="Ex: 5,0" min="0" max="999.9" step="0.1" inputmode="decimal">
-          <div class="error-msg" id="errDayRunKm">Entrez une distance entre 0 et 999,9 km.</div>
-        </div>
-      </div>
-    </div>
-    <div class="form-group">
       <label class="form-label">Note / Titre du jour (optionnel)</label>
       <input type="text" class="form-input" id="inputDayNote" placeholder="Ex: Journée sportive, Repas de famille…" maxlength="80">
     </div>
     <div class="btn-row">
       <button class="btn-cancel" onclick="closeModal('limitModal')">Annuler</button>
       <button class="btn-save" onclick="saveLimit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DAILY ACTIVITY -->
+<div class="modal-overlay" id="activityModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Activité du jour</div>
+    <div class="form-group">
+      <label class="form-label" for="inputDaySteps">Nombre de pas</label>
+      <input type="number" class="form-input" id="inputDaySteps" placeholder="Ex: 8000" min="0" max="100000" step="1" inputmode="numeric">
+      <div class="error-msg" id="errDaySteps">Entrez un nombre entier entre 0 et 100 000.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="inputDayRunKm">Course à pied (km)</label>
+      <input type="number" class="form-input" id="inputDayRunKm" placeholder="Ex: 5,0" min="0" max="999.9" step="0.1" inputmode="decimal">
+      <div class="error-msg" id="errDayRunKm">Entrez une distance entre 0 et 999,9 km.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('activityModal')">Annuler</button>
+      <button class="btn-save" onclick="saveActivity()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1926,6 +1939,35 @@ function deleteEntry(id) {
   showToast('🗑️ Repas supprimé');
 }
 
+function openActivityModal() {
+  const day = state.days[selectedDay] || {};
+  document.getElementById('inputDaySteps').value = day.steps ?? '';
+  document.getElementById('inputDayRunKm').value = day.runningKm ?? '';
+  document.getElementById('errDaySteps').classList.remove('show');
+  document.getElementById('errDayRunKm').classList.remove('show');
+  openModal('activityModal');
+}
+
+function saveActivity() {
+  const stepsRaw = document.getElementById('inputDaySteps').value;
+  const runKmRaw = document.getElementById('inputDayRunKm').value;
+  const steps = stepsRaw === '' ? null : Number(stepsRaw);
+  const runningKm = runKmRaw === '' ? null : Number(runKmRaw);
+  const validSteps = steps === null || (Number.isInteger(steps) && steps >= 0 && steps <= 100000);
+  const validRunningKm = runningKm === null || (Number.isFinite(runningKm) && runningKm >= 0 && runningKm <= 999.9);
+  document.getElementById('errDaySteps').classList.toggle('show', !validSteps);
+  document.getElementById('errDayRunKm').classList.toggle('show', !validRunningKm);
+  if (!validSteps || !validRunningKm) return;
+
+  const day = getDay(selectedDay);
+  day.steps = steps;
+  day.runningKm = runningKm;
+  saveState();
+  closeModal('activityModal');
+  renderAll();
+  showToast('✅ Activité du jour enregistrée dans l’historique');
+}
+
 async function shareDay() {
   const day = state.days[selectedDay] || { entries: [] };
   const entries = Array.isArray(day.entries) ? day.entries : [];
@@ -1994,8 +2036,6 @@ async function shareDay() {
 function openLimitModal() {
   const day = getDay(selectedDay);
   document.getElementById('inputLimit').value = getDayLimit(selectedDay);
-  document.getElementById('inputDaySteps').value = day.steps ?? '';
-  document.getElementById('inputDayRunKm').value = day.runningKm ?? '';
   document.getElementById('inputDayNote').value = day.note || '';
   // show per-day overrides if set, otherwise blank (use global)
   document.getElementById('limitProt').value = day.macroP != null ? day.macroP : '';
@@ -2013,15 +2053,6 @@ function saveLimit() {
     return;
   }
   document.getElementById('errLimit').classList.remove('show');
-  const stepsRaw = document.getElementById('inputDaySteps').value;
-  const runKmRaw = document.getElementById('inputDayRunKm').value;
-  const steps = stepsRaw === '' ? null : Number(stepsRaw);
-  const runningKm = runKmRaw === '' ? null : Number(runKmRaw);
-  const validSteps = steps === null || (Number.isInteger(steps) && steps >= 0 && steps <= 100000);
-  const validRunningKm = runningKm === null || (Number.isFinite(runningKm) && runningKm >= 0 && runningKm <= 999.9);
-  document.getElementById('errDaySteps').classList.toggle('show', !validSteps);
-  document.getElementById('errDayRunKm').classList.toggle('show', !validRunningKm);
-  if (!validSteps || !validRunningKm) return;
   const note = document.getElementById('inputDayNote').value.trim();
   const pRaw = document.getElementById('limitProt').value;
   const gRaw = document.getElementById('limitGluc').value;
@@ -2033,8 +2064,6 @@ function saveLimit() {
   day.macroP = pRaw !== '' ? parseInt(pRaw) : null;
   day.macroG = gRaw !== '' ? parseInt(gRaw) : null;
   day.macroL = lRaw !== '' ? parseInt(lRaw) : null;
-  day.steps = steps;
-  day.runningKm = runningKm;
   saveState();
   closeModal('limitModal');
   renderAll();
