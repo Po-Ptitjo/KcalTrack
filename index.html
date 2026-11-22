@@ -1459,15 +1459,23 @@ function renderHistory() {
     const day = state.days[key];
     const hasEntries = day && Array.isArray(day.entries) && day.entries.length > 0;
     const calories = hasEntries ? `${getTotalCal(key)} kcal` : '—';
+    const macros = getTotalMacros(key);
+    const macroValue = macro => day && Array.isArray(day.entries) &&
+      day.entries.some(entry => entry[macro] != null)
+      ? `${Number(macros[macro].toFixed(1))} g`
+      : '—';
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
     rows.push(`<tr>
       <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${dayNumber} ${weekday}</button></td>
       <td class="history-value">${calories}</td>
+      <td>${macroValue('prot')}</td>
+      <td>${macroValue('gluc')}</td>
+      <td>${macroValue('lip')}</td>
       <td>${getDayLimit(key)} kcal</td>
     </tr>`);
   }
   historyEl.innerHTML = `<table class="history-table">
-    <thead><tr><th>Jour</th><th>Calories</th><th>Limite</th></tr></thead>
+    <thead><tr><th>Jour</th><th>Calories</th><th>P (g)</th><th>G (g)</th><th>L (g)</th><th>Limite</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 
