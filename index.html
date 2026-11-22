@@ -225,8 +225,10 @@
   .history-table tr:last-child td { border-bottom: 0; }
   .history-table .history-value { color: var(--text); font-family: var(--font-display); font-weight: 700; }
   .history-open-day { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 4px; }
-  .history-date-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
-  .history-date-row .form-input { padding: 10px; min-width: 0; }
+  .history-month-form { display: grid; grid-template-columns: 1fr 0.8fr auto; gap: 8px; align-items: end; margin-bottom: 14px; }
+  .history-month-field { min-width: 0; }
+  .history-month-field .form-label { margin-bottom: 5px; }
+  .history-month-form .form-input { padding: 10px; min-width: 0; }
   .history-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 18px 4px; }
   .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
   .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
@@ -525,10 +527,17 @@
   <div id="historyPanel" style="display:none;">
     <div class="chart-card">
       <div class="chart-title">CALORIES — TOUS LES JOURS</div>
-      <div class="history-date-row">
-        <input type="date" class="form-input" id="historyDateInput" aria-label="Choisir une date">
-        <button class="add-btn" onclick="openHistoryDate()">Voir</button>
-      </div>
+      <form class="history-month-form" onsubmit="event.preventDefault();renderHistory()">
+        <div class="history-month-field">
+          <label class="form-label" for="historyMonthInput">Mois</label>
+          <select class="form-input" id="historyMonthInput" aria-label="Choisir un mois"></select>
+        </div>
+        <div class="history-month-field">
+          <label class="form-label" for="historyYearInput">Année</label>
+          <select class="form-input" id="historyYearInput" aria-label="Choisir une année"></select>
+        </div>
+        <button class="add-btn" type="submit">Voir</button>
+      </form>
       <div class="history-intro" id="historyRangeInfo"></div>
       <div class="history-scroll" id="dailyHistory"></div>
     </div>
@@ -1403,44 +1412,64 @@ function renderCharts() {
 }
 
 function renderHistory() {
-  const dateInput = document.getElementById('historyDateInput');
-  if (dateInput) {
-    dateInput.max = todayKey();
-    if (!dateInput.value) dateInput.value = todayKey();
-  }
+  const monthInput = document.getElementById('historyMonthInput');
+  const yearInput = document.getElementById('historyYearInput');
+  const today = todayKey();
+  const currentYear = Number(today.slice(0, 4));
+  const currentMonth = Number(today.slice(5, 7));
+  const knownDates = Object.keys(state.days).filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key) && key <= today);
+  const firstLimitDate = (state.globalLimitHistory || []).map(change => change.date)
+    .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key) && key <= today)
+    .sort()[0];
+  if (firstLimitDate) knownDates.push(firstLimitDate);
+  const firstYear = knownDates.length
+    ? Math.min(...knownDates.map(key => Number(key.slice(0, 4))))
+    : currentYear;
+  const monthNames = Array.from({ length: 12 }, (_, index) =>
+    new Date(Date.UTC(2020, index, 1)).toLocaleDateString('fr-FR', { month: 'long' }));
 
-  const dates = Object.keys(state.days).filter(key => {
-    const day = state.days[key];
-    return /^\d{4}-\d{2}-\d{2}$/.test(key) && key <= todayKey() && day &&
-      ((Array.isArray(day.entries) && day.entries.length > 0) || day.limitOverride === true || Boolean(day.note));
-  }).sort();
-  const historyEl = document.getElementById('dailyHistory');
-  if (!dates.length) {
-    document.getElementById('historyRangeInfo').textContent = 'Aucune journée enregistrée pour le moment.';
-    historyEl.innerHTML = '<div class="history-empty">Les journées apparaîtront ici dès que tu enregistreras un repas.</div>';
-  } else {
-    const first = dates[0];
-    document.getElementById('historyRangeInfo').textContent =
-      `Du ${formatHistoryDate(first)} à aujourd’hui. Les journées sans repas enregistré sont indiquées par « — ».`;
-    const rows = [];
-    const end = new Date(todayKey() + 'T00:00:00Z');
-    const start = new Date(first + 'T00:00:00Z');
-    for (const date = new Date(start); date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
-      const key = date.toISOString().slice(0, 10);
-      const day = state.days[key];
-      const total = getTotalCal(key);
-      const calories = day && day.entries.length ? `${total} kcal` : '—';
-      rows.push(`<tr>
-        <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${formatHistoryDate(key)}</button></td>
-        <td class="history-value">${calories}</td>
-        <td>${getDayLimit(key)} kcal</td>
-      </tr>`);
-    }
-    historyEl.innerHTML = `<table class="history-table">
-      <thead><tr><th>Jour</th><th>Calories</th><th>Limite</th></tr></thead>
-      <tbody>${rows.reverse().join('')}</tbody>
-    </table>`;
+  const selectedYear = Number(yearInput.value) || currentYear;
+  const year = Math.min(currentYear, Math.max(firstYear, selectedYear));
+  let month = Number(monthInput.value) || currentMonth;
+  if (year === currentYear) month = Math.min(month, currentMonth);
+  month = Math.max(1, Math.min(12, month));
+
+  if (!monthInput.options.length) {
+    monthInput.innerHTML = monthNames.map((name, index) =>
+      `<option value="${index + 1}">${name.charAt(0).toUpperCase() + name.slice(1)}</option>`).join('');
   }
+  const years = [];
+  for (let optionYear = currentYear; optionYear >= firstYear; optionYear--) {
+    years.push(`<option value="${optionYear}">${optionYear}</option>`);
+  }
+  yearInput.innerHTML = years.join('');
+  monthInput.value = String(month);
+  yearInput.value = String(year);
+
+  const historyEl = document.getElementById('dailyHistory');
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const daysToShow = year === currentYear && month === currentMonth
+    ? Number(today.slice(8, 10))
+    : daysInMonth;
+  document.getElementById('historyRangeInfo').textContent =
+    `${monthNames[month - 1].charAt(0).toUpperCase() + monthNames[month - 1].slice(1)} ${year} · Les jours sans repas enregistré affichent « — ».`;
+  const rows = [];
+  for (let dayNumber = 1; dayNumber <= daysToShow; dayNumber++) {
+    const key = `${year}-${String(month).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+    const day = state.days[key];
+    const hasEntries = day && Array.isArray(day.entries) && day.entries.length > 0;
+    const calories = hasEntries ? `${getTotalCal(key)} kcal` : '—';
+    const weekday = new Date(key + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
+    rows.push(`<tr>
+      <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${dayNumber} ${weekday}</button></td>
+      <td class="history-value">${calories}</td>
+      <td>${getDayLimit(key)} kcal</td>
+    </tr>`);
+  }
+  historyEl.innerHTML = `<table class="history-table">
+    <thead><tr><th>Jour</th><th>Calories</th><th>Limite</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>`;
 
   const changes = (state.globalLimitHistory || []).slice().sort((a, b) => a.date.localeCompare(b.date));
   const info = document.getElementById('limitHistoryInfo');
@@ -1454,7 +1483,7 @@ function renderHistory() {
   info.textContent = `Les changements de limite par défaut sont suivis à partir du ${formatHistoryDate(changes[0].date)}. Les limites réellement enregistrées pour les anciens jours et les limites personnalisées figurent dans le tableau des jours.`;
   const currentDate = todayKey();
   const descendingChanges = changes.slice().reverse();
-  const rows = descendingChanges.map((change, index) => {
+  const limitRows = descendingChanges.map((change, index) => {
     const newer = descendingChanges[index - 1];
     const throughDate = newer ? addDays(newer.date, -1) : currentDate;
     const duration = Math.max(1, daysBetween(change.date, throughDate) + 1);
@@ -1465,7 +1494,7 @@ function renderHistory() {
   });
   list.innerHTML = `<table class="history-table">
     <thead><tr><th>Début</th><th>Limite</th><th>Durée</th></tr></thead>
-    <tbody>${rows.join('')}</tbody>
+    <tbody>${limitRows.join('')}</tbody>
   </table>`;
 }
 
@@ -1486,15 +1515,6 @@ function addDays(key, amount) {
 function openHistoryDay(date) {
   selectedDay = date;
   switchView('home');
-}
-
-function openHistoryDate() {
-  const date = document.getElementById('historyDateInput').value;
-  if (!date) {
-    showToast('❌ Choisis une date');
-    return;
-  }
-  openHistoryDay(date);
 }
 
 function renderStats(data, avg) {
