@@ -446,7 +446,7 @@
       </div>
 
       <div class="limit-row">
-        <span class="limit-label">Objectif calorique quotidien</span>
+        <span class="limit-label">Objectifs et activité du jour</span>
         <button class="limit-edit-btn" onclick="openLimitModal()">✏️ Modifier</button>
       </div>
     </div>
@@ -907,6 +907,21 @@
         </div>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:6px;">Laisser vide pour utiliser les objectifs globaux.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Activité du jour — optionnel</label>
+      <div class="macros-form-row" style="grid-template-columns:1fr 1fr;">
+        <div class="macro-form-field">
+          <label class="macro-form-label" for="inputDaySteps" style="color:var(--accent3)">Pas</label>
+          <input type="number" class="macro-form-input" id="inputDaySteps" placeholder="Ex: 8000" min="0" max="100000" step="1" inputmode="numeric">
+          <div class="error-msg" id="errDaySteps">Entrez un nombre de pas entre 0 et 100 000.</div>
+        </div>
+        <div class="macro-form-field">
+          <label class="macro-form-label" for="inputDayRunKm" style="color:var(--accent4)">Course (km)</label>
+          <input type="number" class="macro-form-input" id="inputDayRunKm" placeholder="Ex: 5,0" min="0" max="999.9" step="0.1" inputmode="decimal">
+          <div class="error-msg" id="errDayRunKm">Entrez une distance entre 0 et 999,9 km.</div>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Note / Titre du jour (optionnel)</label>
@@ -1464,6 +1479,10 @@ function renderHistory() {
       day.entries.some(entry => entry[macro] != null)
       ? `${Number(macros[macro].toFixed(1))} g`
       : '—';
+    const steps = day && day.steps != null ? `${day.steps.toLocaleString('fr-FR')}` : '—';
+    const runningKm = day && day.runningKm != null
+      ? `${day.runningKm.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`
+      : '—';
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
     rows.push(`<tr>
       <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${dayNumber} ${weekday}</button></td>
@@ -1471,11 +1490,13 @@ function renderHistory() {
       <td>${macroValue('prot')}</td>
       <td>${macroValue('gluc')}</td>
       <td>${macroValue('lip')}</td>
+      <td>${steps}</td>
+      <td>${runningKm}</td>
       <td>${getDayLimit(key)} kcal</td>
     </tr>`);
   }
   historyEl.innerHTML = `<table class="history-table">
-    <thead><tr><th>Jour</th><th>Calories</th><th>P (g)</th><th>G (g)</th><th>L (g)</th><th>Limite</th></tr></thead>
+    <thead><tr><th>Jour</th><th>Calories</th><th>P (g)</th><th>G (g)</th><th>L (g)</th><th>Pas</th><th>Course</th><th>Limite</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 
@@ -1905,6 +1926,8 @@ function deleteEntry(id) {
 function openLimitModal() {
   const day = getDay(selectedDay);
   document.getElementById('inputLimit').value = getDayLimit(selectedDay);
+  document.getElementById('inputDaySteps').value = day.steps ?? '';
+  document.getElementById('inputDayRunKm').value = day.runningKm ?? '';
   document.getElementById('inputDayNote').value = day.note || '';
   // show per-day overrides if set, otherwise blank (use global)
   document.getElementById('limitProt').value = day.macroP != null ? day.macroP : '';
@@ -1922,6 +1945,15 @@ function saveLimit() {
     return;
   }
   document.getElementById('errLimit').classList.remove('show');
+  const stepsRaw = document.getElementById('inputDaySteps').value;
+  const runKmRaw = document.getElementById('inputDayRunKm').value;
+  const steps = stepsRaw === '' ? null : Number(stepsRaw);
+  const runningKm = runKmRaw === '' ? null : Number(runKmRaw);
+  const validSteps = steps === null || (Number.isInteger(steps) && steps >= 0 && steps <= 100000);
+  const validRunningKm = runningKm === null || (Number.isFinite(runningKm) && runningKm >= 0 && runningKm <= 999.9);
+  document.getElementById('errDaySteps').classList.toggle('show', !validSteps);
+  document.getElementById('errDayRunKm').classList.toggle('show', !validRunningKm);
+  if (!validSteps || !validRunningKm) return;
   const note = document.getElementById('inputDayNote').value.trim();
   const pRaw = document.getElementById('limitProt').value;
   const gRaw = document.getElementById('limitGluc').value;
@@ -1933,6 +1965,8 @@ function saveLimit() {
   day.macroP = pRaw !== '' ? parseInt(pRaw) : null;
   day.macroG = gRaw !== '' ? parseInt(gRaw) : null;
   day.macroL = lRaw !== '' ? parseInt(lRaw) : null;
+  day.steps = steps;
+  day.runningKm = runningKm;
   saveState();
   closeModal('limitModal');
   renderAll();
