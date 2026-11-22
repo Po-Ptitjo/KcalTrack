@@ -217,6 +217,17 @@
   .chart-tab.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
   .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 16px; }
   .chart-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 20px; }
+  .history-intro { font-size: 12px; color: var(--text3); line-height: 1.5; margin: -8px 0 14px; }
+  .history-scroll { overflow-x: auto; margin: 0 -4px; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+  .history-table th { color: var(--text3); font-size: 10px; text-align: left; text-transform: uppercase; letter-spacing: 0.7px; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  .history-table td { color: var(--text2); padding: 10px 6px; border-bottom: 1px solid var(--border); }
+  .history-table tr:last-child td { border-bottom: 0; }
+  .history-table .history-value { color: var(--text); font-family: var(--font-display); font-weight: 700; }
+  .history-open-day { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 4px; }
+  .history-date-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .history-date-row .form-input { padding: 10px; min-width: 0; }
+  .history-empty { color: var(--text3); font-size: 13px; text-align: center; padding: 18px 4px; }
   .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
   .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
   .bar-col-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; position: relative; }
@@ -467,8 +478,10 @@
     <div class="chart-tabs">
       <div class="chart-tab active" id="tabWeek" onclick="switchChartTab('week')">7 jours</div>
       <div class="chart-tab" id="tabMonth" onclick="switchChartTab('month')">30 jours</div>
+      <div class="chart-tab" id="tabHistory" onclick="switchChartTab('history')">Depuis le début</div>
     </div>
 
+    <div id="rangeCharts">
     <!-- Calories chart -->
     <div class="chart-card">
       <div class="chart-title" id="chartTitle">CALORIES — 7 DERNIERS JOURS</div>
@@ -507,12 +520,31 @@
       </div>
     </div>
   </div>
+  </div>
 
+  <div id="historyPanel" style="display:none;">
+    <div class="chart-card">
+      <div class="chart-title">CALORIES — TOUS LES JOURS</div>
+      <div class="history-date-row">
+        <input type="date" class="form-input" id="historyDateInput" aria-label="Choisir une date">
+        <button class="add-btn" onclick="openHistoryDate()">Voir</button>
+      </div>
+      <div class="history-intro" id="historyRangeInfo"></div>
+      <div class="history-scroll" id="dailyHistory"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">HISTORIQUE DES LIMITES PAR DÉFAUT</div>
+      <div class="history-intro" id="limitHistoryInfo"></div>
+      <div class="history-scroll" id="limitHistoryList"></div>
+    </div>
+  </div>
+  <div id="rangeStats">
   <div class="section-divider"></div>
   <div class="section-header">
-    <div class="section-title">📊 Statistiques</div>
+  <div class="section-title">📊 Statistiques</div>
   </div>
   <div class="stats-grid" id="statsGrid"></div>
+  </div>
   <div class="scroll-pad"></div>
 </div>
 
@@ -923,6 +955,7 @@ let state = {
     weight: [],
     unit: []
   },
+  globalLimitHistory: [],
   days: {},
   weights: []
   // days[key]: { limit, macroP?, macroG?, macroL?, note, entries:[{id,emoji,title,desc,cal,prot?,gluc?,lip?, source?, foodId?}] }
@@ -941,6 +974,7 @@ function todayKey() {
 }
 
 function loadState() {
+  let needsSave = false;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -956,6 +990,7 @@ function loadState() {
         bmr: { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' },
         dailyNotificationEnabled: false,
         foodDb: { weight: [], unit: [] },
+        globalLimitHistory: [],
         days: {},
         weights: []
       }, loaded);
@@ -965,7 +1000,31 @@ function loadState() {
       if (!state.wallpaper) state.wallpaper = { dataUrl: '', label: '', width: '', height: '' };
       if (!state.bmr) state.bmr = { sex: 'female', age: 28, height: 170, weight: 68, activity: 1.375, runningKm: 0, gymSessions: 0, neat: 250, goal: 'maintenance' };
     }
-  } catch(e) {}
+  } catch(e) {
+    console.error('Unable to load saved KCalTrack data:', e);
+    showToast('❌ Impossible de lire les données enregistrées');
+    return;
+  }
+
+  if (!Array.isArray(state.globalLimitHistory) || !state.globalLimitHistory.length) {
+    state.globalLimitHistory = [{ date: todayKey(), limit: state.globalLimit }];
+    needsSave = true;
+  }
+  const originalHistory = state.globalLimitHistory;
+  const historyByDate = new Map();
+  state.globalLimitHistory.forEach(change => {
+    if (change && /^\d{4}-\d{2}-\d{2}$/.test(change.date) &&
+        Number.isFinite(Number(change.limit)) && Number(change.limit) > 0) {
+      historyByDate.set(change.date, { date: change.date, limit: Number(change.limit) });
+    }
+  });
+  if (historyByDate.size !== originalHistory.length) needsSave = true;
+  state.globalLimitHistory = [...historyByDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  if (!state.globalLimitHistory.length) {
+    state.globalLimitHistory = [{ date: todayKey(), limit: state.globalLimit }];
+    needsSave = true;
+  }
+  if (needsSave) saveState();
 }
 
 function saveState() {
@@ -1023,9 +1082,42 @@ function applyPresetTheme(phase) {
 
 function getDay(key) {
   if (!state.days[key]) {
-    state.days[key] = { limit: state.globalLimit, entries: [] };
+    state.days[key] = { limit: getGlobalLimitForDate(key), limitOverride: false, entries: [] };
   }
   return state.days[key];
+}
+
+function getGlobalLimitForDate(key) {
+  const changes = state.globalLimitHistory || [];
+  let limit = changes.length ? changes[0].limit : state.globalLimit;
+  changes.forEach(change => {
+    if (change.date <= key) limit = change.limit;
+  });
+  return limit;
+}
+
+function getDayLimit(key) {
+  const day = state.days[key];
+  if (day && day.limitOverride === true) return day.limit;
+  if (day && day.limitOverride == null && day.limit != null) return day.limit;
+  return getGlobalLimitForDate(key);
+}
+
+function updateDefaultLimit(limit) {
+  const date = todayKey();
+  const previousEffectiveLimit = getGlobalLimitForDate(date);
+  state.globalLimit = limit;
+  const sameDayChange = state.globalLimitHistory.find(change => change.date === date);
+  if (sameDayChange) sameDayChange.limit = limit;
+  else state.globalLimitHistory.push({ date, limit });
+  state.globalLimitHistory.sort((a, b) => a.date.localeCompare(b.date));
+
+  const today = state.days[date];
+  if (today && today.limitOverride !== true &&
+      (today.limitOverride === false || today.limit === previousEffectiveLimit)) {
+    today.limit = limit;
+    today.limitOverride = false;
+  }
 }
 
 function getTotalCal(key) {
@@ -1082,9 +1174,13 @@ function renderDayNav() {
   const nav = document.getElementById('dayNav');
   nav.innerHTML = '';
   const today = new Date();
+  const oldestVisible = new Date(today);
+  oldestVisible.setDate(today.getDate() - 6);
+  const oldestVisibleKey = oldestVisible.toISOString().split('T')[0];
+  const navEnd = selectedDay < oldestVisibleKey ? new Date(selectedDay + 'T12:00:00') : today;
   for (let i = -6; i <= 0; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    const d = new Date(navEnd);
+    d.setDate(navEnd.getDate() + i);
     const key = d.toISOString().split('T')[0];
     const hasData = state.days[key] && state.days[key].entries.length > 0;
     const pill = document.createElement('div');
@@ -1117,7 +1213,7 @@ function renderHeader() {
 function renderHome() {
   const day = getDay(selectedDay);
   const total = getTotalCal(selectedDay);
-  const limit = day.limit;
+  const limit = getDayLimit(selectedDay);
   const remaining = limit - total;
   const pct = Math.min(100, Math.round((total / limit) * 100));
 
@@ -1210,6 +1306,18 @@ function renderEntries() {
 // CHARTS
 // ═══════════════════════════════════════════════════════
 function renderCharts() {
+  const isHistory = currentChartTab === 'history';
+  document.getElementById('tabWeek').classList.toggle('active', currentChartTab === 'week');
+  document.getElementById('tabMonth').classList.toggle('active', currentChartTab === 'month');
+  document.getElementById('tabHistory').classList.toggle('active', isHistory);
+  document.getElementById('rangeCharts').style.display = isHistory ? 'none' : 'block';
+  document.getElementById('historyPanel').style.display = isHistory ? 'block' : 'none';
+  document.getElementById('rangeStats').style.display = isHistory ? 'none' : 'block';
+  if (isHistory) {
+    renderHistory();
+    return;
+  }
+
   const days = currentChartTab === 'week' ? 7 : 30;
   document.getElementById('chartTitle').textContent =
     `CALORIES — ${days === 7 ? '7 DERNIERS JOURS' : '30 DERNIERS JOURS'}`;
@@ -1225,7 +1333,7 @@ function renderCharts() {
     const key = d.toISOString().split('T')[0];
     const cal = getTotalCal(key);
     const macros = getTotalMacros(key);
-    const dayLimit = state.days[key]?.limit || state.globalLimit;
+    const dayLimit = getDayLimit(key);
     data.push({ key, cal, macros, limit: dayLimit, label: days === 7 ? DAYS_FR[d.getDay()] : d.getDate() });
     if (cal > 0) { totalCal += cal; countCal++; }
     const hasMacros = macros.prot || macros.gluc || macros.lip;
@@ -1242,7 +1350,7 @@ function renderCharts() {
   // Calorie bar chart
   const chart = document.getElementById('barChart');
   chart.innerHTML = '';
-  const maxCal = Math.max(...data.map(d => d.cal), state.globalLimit, 100);
+  const maxCal = Math.max(...data.map(d => Math.max(d.cal, d.limit)), 100);
 
   data.forEach(d => {
     const heightPct = maxCal > 0 ? (d.cal / maxCal) * 100 : 0;
@@ -1292,6 +1400,101 @@ function renderCharts() {
 
   renderStats(data, avg);
   renderWeightChart();
+}
+
+function renderHistory() {
+  const dateInput = document.getElementById('historyDateInput');
+  if (dateInput) {
+    dateInput.max = todayKey();
+    if (!dateInput.value) dateInput.value = todayKey();
+  }
+
+  const dates = Object.keys(state.days).filter(key => {
+    const day = state.days[key];
+    return /^\d{4}-\d{2}-\d{2}$/.test(key) && key <= todayKey() && day &&
+      ((Array.isArray(day.entries) && day.entries.length > 0) || day.limitOverride === true || Boolean(day.note));
+  }).sort();
+  const historyEl = document.getElementById('dailyHistory');
+  if (!dates.length) {
+    document.getElementById('historyRangeInfo').textContent = 'Aucune journée enregistrée pour le moment.';
+    historyEl.innerHTML = '<div class="history-empty">Les journées apparaîtront ici dès que tu enregistreras un repas.</div>';
+  } else {
+    const first = dates[0];
+    document.getElementById('historyRangeInfo').textContent =
+      `Du ${formatHistoryDate(first)} à aujourd’hui. Les journées sans repas enregistré sont indiquées par « — ».`;
+    const rows = [];
+    const end = new Date(todayKey() + 'T00:00:00Z');
+    const start = new Date(first + 'T00:00:00Z');
+    for (const date = new Date(start); date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
+      const key = date.toISOString().slice(0, 10);
+      const day = state.days[key];
+      const total = getTotalCal(key);
+      const calories = day && day.entries.length ? `${total} kcal` : '—';
+      rows.push(`<tr>
+        <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${formatHistoryDate(key)}</button></td>
+        <td class="history-value">${calories}</td>
+        <td>${getDayLimit(key)} kcal</td>
+      </tr>`);
+    }
+    historyEl.innerHTML = `<table class="history-table">
+      <thead><tr><th>Jour</th><th>Calories</th><th>Limite</th></tr></thead>
+      <tbody>${rows.reverse().join('')}</tbody>
+    </table>`;
+  }
+
+  const changes = (state.globalLimitHistory || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const info = document.getElementById('limitHistoryInfo');
+  const list = document.getElementById('limitHistoryList');
+  if (!changes.length) {
+    info.textContent = 'Aucun changement de limite enregistré.';
+    list.innerHTML = '<div class="history-empty">Les limites modifiées apparaîtront ici.</div>';
+    return;
+  }
+
+  info.textContent = `Les changements de limite par défaut sont suivis à partir du ${formatHistoryDate(changes[0].date)}. Les limites réellement enregistrées pour les anciens jours et les limites personnalisées figurent dans le tableau des jours.`;
+  const currentDate = todayKey();
+  const descendingChanges = changes.slice().reverse();
+  const rows = descendingChanges.map((change, index) => {
+    const newer = descendingChanges[index - 1];
+    const throughDate = newer ? addDays(newer.date, -1) : currentDate;
+    const duration = Math.max(1, daysBetween(change.date, throughDate) + 1);
+    const period = newer
+      ? `jusqu’au ${formatHistoryDate(throughDate)}`
+      : `depuis le ${formatHistoryDate(change.date)}`;
+    return `<tr><td>${formatHistoryDate(change.date)}</td><td class="history-value">${change.limit} kcal</td><td>${period} · ${duration} j</td></tr>`;
+  });
+  list.innerHTML = `<table class="history-table">
+    <thead><tr><th>Début</th><th>Limite</th><th>Durée</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>`;
+}
+
+function formatHistoryDate(key) {
+  return new Date(key + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function daysBetween(start, end) {
+  return Math.round((Date.parse(end + 'T00:00:00Z') - Date.parse(start + 'T00:00:00Z')) / 86400000);
+}
+
+function addDays(key, amount) {
+  const date = new Date(key + 'T00:00:00Z');
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+}
+
+function openHistoryDay(date) {
+  selectedDay = date;
+  switchView('home');
+}
+
+function openHistoryDate() {
+  const date = document.getElementById('historyDateInput').value;
+  if (!date) {
+    showToast('❌ Choisis une date');
+    return;
+  }
+  openHistoryDay(date);
 }
 
 function renderStats(data, avg) {
@@ -1511,6 +1714,7 @@ function switchChartTab(tab) {
   currentChartTab = tab;
   document.getElementById('tabWeek').classList.toggle('active', tab === 'week');
   document.getElementById('tabMonth').classList.toggle('active', tab === 'month');
+  document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
   renderCharts();
 }
 
@@ -1672,8 +1876,7 @@ function deleteEntry(id) {
 
 function openLimitModal() {
   const day = getDay(selectedDay);
-  const goals = getDayMacroGoals(selectedDay);
-  document.getElementById('inputLimit').value = day.limit;
+  document.getElementById('inputLimit').value = getDayLimit(selectedDay);
   document.getElementById('inputDayNote').value = day.note || '';
   // show per-day overrides if set, otherwise blank (use global)
   document.getElementById('limitProt').value = day.macroP != null ? day.macroP : '';
@@ -1697,6 +1900,7 @@ function saveLimit() {
   const lRaw = document.getElementById('limitLip').value;
   const day = getDay(selectedDay);
   day.limit  = val;
+  day.limitOverride = true;
   day.note   = note;
   day.macroP = pRaw !== '' ? parseInt(pRaw) : null;
   day.macroG = gRaw !== '' ? parseInt(gRaw) : null;
@@ -1710,8 +1914,9 @@ function saveLimit() {
 function saveGlobalLimit() {
   const val = parseInt(document.getElementById('globalLimitInput').value);
   if (!val || val < 500 || val > 9999) { showToast('❌ Valeur invalide'); return; }
-  state.globalLimit = val;
+  updateDefaultLimit(val);
   saveState();
+  renderAll();
   showToast('✅ Limite par défaut enregistrée');
 }
 
@@ -1859,9 +2064,8 @@ async function updateDailyProgressNotification() {
 
   const registration = await navigator.serviceWorker.ready;
   const date = todayKey();
-  const day = state.days[date];
   const calories = getTotalCal(date);
-  const limit = day && day.limit != null ? day.limit : state.globalLimit;
+  const limit = getDayLimit(date);
   const macros = getTotalMacros(date);
   const goals = getDayMacroGoals(date);
   const remaining = Math.max(0, limit - calories);
@@ -1999,7 +2203,7 @@ function saveBmrSettings() {
   saveState();
   const calc = calculateBmrEstimate();
   if (calc) {
-    state.globalLimit = Math.round(calc.maintenance);
+    updateDefaultLimit(Math.round(calc.maintenance));
     document.getElementById('globalLimitInput').value = state.globalLimit;
     saveState();
   }

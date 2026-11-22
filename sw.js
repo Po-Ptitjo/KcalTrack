@@ -1,5 +1,5 @@
 // KCalTrack Service Worker v2.0
-const CACHE_NAME = 'kcaltrack-v11';
+const CACHE_NAME = 'kcaltrack-v12';
 const BASE = '/KcalTrack';
 const ASSETS = [
   BASE + '/',
@@ -64,6 +64,21 @@ self.addEventListener('fetch', event => {
           const clone = res.clone();
           caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
           return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  if (event.request.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(console.warn);
+          }
+          return response;
         })
         .catch(() => caches.match(event.request))
     );
