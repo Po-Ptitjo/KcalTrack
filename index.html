@@ -943,6 +943,11 @@
       <input type="number" class="form-input" id="inputDayRunKm" placeholder="Ex: 5,0" min="0" max="999.9" step="0.1" inputmode="decimal">
       <div class="error-msg" id="errDayRunKm">Entrez une distance entre 0 et 999,9 km.</div>
     </div>
+    <div class="form-group">
+      <label class="form-label" for="inputDayWeight">Poids (kg)</label>
+      <input type="number" class="form-input" id="inputDayWeight" placeholder="Ex: 72,4" min="1" max="500" step="0.1" inputmode="decimal">
+      <div class="error-msg" id="errDayWeight">Entrez un poids entre 1 et 500 kg.</div>
+    </div>
     <div class="btn-row">
       <button class="btn-cancel" onclick="closeModal('activityModal')">Annuler</button>
       <button class="btn-save" onclick="saveActivity()">Enregistrer</button>
@@ -1499,6 +1504,10 @@ function renderHistory() {
     const runningKm = day && day.runningKm != null
       ? `${day.runningKm.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`
       : '—';
+    const weight = getWeightForDate(key);
+    const weightValue = weight == null
+      ? '—'
+      : `${weight.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} kg`;
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
     rows.push(`<tr>
       <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${dayNumber} ${weekday}</button></td>
@@ -1508,11 +1517,12 @@ function renderHistory() {
       <td>${macroValue('lip')}</td>
       <td>${steps}</td>
       <td>${runningKm}</td>
+      <td>${weightValue}</td>
       <td>${getDayLimit(key)} kcal</td>
     </tr>`);
   }
   historyEl.innerHTML = `<table class="history-table">
-    <thead><tr><th>Jour</th><th>Calories</th><th>P (g)</th><th>G (g)</th><th>L (g)</th><th>Pas</th><th>Course</th><th>Limite</th></tr></thead>
+    <thead><tr><th>Jour</th><th>Calories</th><th>P (g)</th><th>G (g)</th><th>L (g)</th><th>Pas</th><th>Course</th><th>Poids</th><th>Limite</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 
@@ -1601,6 +1611,22 @@ function renderStats(data, avg) {
 // ═══════════════════════════════════════════════════════
 // WEIGHT TRACKING
 // ═══════════════════════════════════════════════════════
+function getWeightForDate(date) {
+  const measurement = (state.weights || []).find(weight => weight.date === date);
+  return measurement ? Number(measurement.value) : null;
+}
+
+function setWeightForDate(date, value) {
+  if (!Array.isArray(state.weights)) state.weights = [];
+  const existingIndex = state.weights.findIndex(weight => weight.date === date);
+  if (value == null) {
+    if (existingIndex !== -1) state.weights.splice(existingIndex, 1);
+    return;
+  }
+  if (existingIndex !== -1) state.weights[existingIndex].value = value;
+  else state.weights.push({ date, value });
+}
+
 function renderWeightChart() {
   const wrap = document.getElementById('weightChartWrap');
   const pointTextEl = document.getElementById('weightPointText');
@@ -1751,10 +1777,7 @@ function saveWeight() {
   }
   err.classList.remove('show');
 
-  if (!state.weights) state.weights = [];
-  const existing = state.weights.find(w => w.date === date);
-  if (existing) existing.value = value;
-  else state.weights.push({ date, value });
+  setWeightForDate(date, value);
 
   saveState();
   closeModal('weightModal');
@@ -1943,25 +1966,32 @@ function openActivityModal() {
   const day = state.days[selectedDay] || {};
   document.getElementById('inputDaySteps').value = day.steps ?? '';
   document.getElementById('inputDayRunKm').value = day.runningKm ?? '';
+  document.getElementById('inputDayWeight').value = getWeightForDate(selectedDay) ?? '';
   document.getElementById('errDaySteps').classList.remove('show');
   document.getElementById('errDayRunKm').classList.remove('show');
+  document.getElementById('errDayWeight').classList.remove('show');
   openModal('activityModal');
 }
 
 function saveActivity() {
   const stepsRaw = document.getElementById('inputDaySteps').value;
   const runKmRaw = document.getElementById('inputDayRunKm').value;
+  const weightRaw = document.getElementById('inputDayWeight').value;
   const steps = stepsRaw === '' ? null : Number(stepsRaw);
   const runningKm = runKmRaw === '' ? null : Number(runKmRaw);
+  const weight = weightRaw === '' ? null : Number(weightRaw);
   const validSteps = steps === null || (Number.isInteger(steps) && steps >= 0 && steps <= 100000);
   const validRunningKm = runningKm === null || (Number.isFinite(runningKm) && runningKm >= 0 && runningKm <= 999.9);
+  const validWeight = weight === null || (Number.isFinite(weight) && weight >= 1 && weight <= 500);
   document.getElementById('errDaySteps').classList.toggle('show', !validSteps);
   document.getElementById('errDayRunKm').classList.toggle('show', !validRunningKm);
-  if (!validSteps || !validRunningKm) return;
+  document.getElementById('errDayWeight').classList.toggle('show', !validWeight);
+  if (!validSteps || !validRunningKm || !validWeight) return;
 
   const day = getDay(selectedDay);
   day.steps = steps;
   day.runningKm = runningKm;
+  setWeightForDate(selectedDay, weight);
   saveState();
   closeModal('activityModal');
   renderAll();
@@ -1972,6 +2002,7 @@ async function shareDay() {
   const day = state.days[selectedDay] || { entries: [] };
   const macros = getTotalMacros(selectedDay);
   const limit = getDayLimit(selectedDay);
+  const weight = getWeightForDate(selectedDay);
   const date = new Date(selectedDay + 'T12:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
@@ -1982,6 +2013,7 @@ async function shareDay() {
     `Macros : protéines ${macros.prot} g · glucides ${macros.gluc} g · lipides ${macros.lip} g`,
     `Pas : ${optionalValue(day.steps)}`,
     `Course à pied : ${day.runningKm == null ? 'Non renseignée' : `${day.runningKm} km`}`,
+    `Poids : ${weight == null ? 'Non renseigné' : `${weight} kg`}`,
     day.note ? `Note : ${day.note}` : null
   ].filter(line => line != null).join('\n');
 
