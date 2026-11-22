@@ -167,6 +167,8 @@
   .limit-label { font-size: 12px; color: var(--text2); }
   .limit-edit-btn { display: flex; align-items: center; gap: 6px; font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--accent); background: rgba(200,245,66,0.1); border: 1px solid rgba(200,245,66,0.2); border-radius: 20px; padding: 5px 14px; cursor: pointer; transition: all 0.15s; }
   .limit-edit-btn:active { transform: scale(0.95); }
+  .day-share-btn { width: 100%; margin-top: 12px; padding: 11px 14px; border: 1px solid rgba(107,197,255,0.25); border-radius: 12px; background: rgba(107,197,255,0.1); color: var(--accent3); font-family: var(--font-display); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .day-share-btn:active { transform: scale(0.98); }
 
   /* DAY NOTE */
   .day-note-row { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 0; padding: 12px 14px; background: var(--surface2); border-radius: 12px; border: 1px solid var(--border); }
@@ -449,6 +451,7 @@
         <span class="limit-label">Objectifs et activité du jour</span>
         <button class="limit-edit-btn" onclick="openLimitModal()">✏️ Modifier</button>
       </div>
+      <button class="day-share-btn" type="button" onclick="shareDay()">📤 Partager la journée</button>
     </div>
   </div>
 
@@ -1921,6 +1924,71 @@ function deleteEntry(id) {
   saveState();
   renderAll();
   showToast('🗑️ Repas supprimé');
+}
+
+async function shareDay() {
+  const day = state.days[selectedDay] || { entries: [] };
+  const entries = Array.isArray(day.entries) ? day.entries : [];
+  const macros = getTotalMacros(selectedDay);
+  const limit = getDayLimit(selectedDay);
+  const date = new Date(selectedDay + 'T12:00:00').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const optionalValue = value => value == null ? 'Non renseigné' : value;
+  const entryLines = entries.length
+    ? entries.map(entry => {
+        const entryMacros = [
+          entry.prot != null ? `P ${entry.prot} g` : null,
+          entry.gluc != null ? `G ${entry.gluc} g` : null,
+          entry.lip != null ? `L ${entry.lip} g` : null
+        ].filter(Boolean);
+        return `- ${entry.title}: ${entry.cal} kcal${entryMacros.length ? ` · ${entryMacros.join(' · ')}` : ''}${entry.desc ? ` (${entry.desc})` : ''}`;
+      }).join('\n')
+    : 'Aucun repas enregistré.';
+  const text = [
+    `KCalTrack — ${date}`,
+    `Calories : ${getTotalCal(selectedDay)} / ${limit} kcal`,
+    `Macros : protéines ${macros.prot} g · glucides ${macros.gluc} g · lipides ${macros.lip} g`,
+    `Pas : ${optionalValue(day.steps)}`,
+    `Course à pied : ${day.runningKm == null ? 'Non renseignée' : `${day.runningKm} km`}`,
+    day.note ? `Note : ${day.note}` : null,
+    '',
+    'Repas :',
+    entryLines
+  ].filter(line => line != null).join('\n');
+
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title: `KCalTrack — ${date}`, text });
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      console.error('Unable to share daily summary:', error);
+      showToast('❌ Impossible de partager la journée');
+      return;
+    }
+  }
+
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const input = document.createElement('textarea');
+      input.value = text;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      const copied = document.execCommand('copy');
+      input.remove();
+      if (!copied) throw new Error('Clipboard copy was rejected');
+    }
+    showToast('✅ Résumé copié, prêt à être partagé');
+  } catch (error) {
+    console.error('Unable to copy daily summary:', error);
+    showToast('❌ Impossible de partager la journée');
+  }
 }
 
 function openLimitModal() {
