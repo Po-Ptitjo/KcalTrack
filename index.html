@@ -1970,33 +1970,19 @@ function saveActivity() {
 
 async function shareDay() {
   const day = state.days[selectedDay] || { entries: [] };
-  const entries = Array.isArray(day.entries) ? day.entries : [];
   const macros = getTotalMacros(selectedDay);
   const limit = getDayLimit(selectedDay);
   const date = new Date(selectedDay + 'T12:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
   const optionalValue = value => value == null ? 'Non renseigné' : value;
-  const entryLines = entries.length
-    ? entries.map(entry => {
-        const entryMacros = [
-          entry.prot != null ? `P ${entry.prot} g` : null,
-          entry.gluc != null ? `G ${entry.gluc} g` : null,
-          entry.lip != null ? `L ${entry.lip} g` : null
-        ].filter(Boolean);
-        return `- ${entry.title}: ${entry.cal} kcal${entryMacros.length ? ` · ${entryMacros.join(' · ')}` : ''}${entry.desc ? ` (${entry.desc})` : ''}`;
-      }).join('\n')
-    : 'Aucun repas enregistré.';
   const text = [
     `KCalTrack — ${date}`,
     `Calories : ${getTotalCal(selectedDay)} / ${limit} kcal`,
     `Macros : protéines ${macros.prot} g · glucides ${macros.gluc} g · lipides ${macros.lip} g`,
     `Pas : ${optionalValue(day.steps)}`,
     `Course à pied : ${day.runningKm == null ? 'Non renseignée' : `${day.runningKm} km`}`,
-    day.note ? `Note : ${day.note}` : null,
-    '',
-    'Repas :',
-    entryLines
+    day.note ? `Note : ${day.note}` : null
   ].filter(line => line != null).join('\n');
 
   if (typeof navigator.share === 'function') {
