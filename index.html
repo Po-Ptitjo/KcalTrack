@@ -264,6 +264,16 @@
   .macro-chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 48px; }
   .macro-chart-col { flex: 1; border-radius: 4px 4px 0 0; min-height: 3px; transition: height 0.5s cubic-bezier(0.34,1.56,0.64,1); position: relative; overflow: hidden; }
   .macro-chart-col::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%); }
+  .period-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .period-summary-grid + .chart-card { margin-top: 20px; }
+  .period-summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-width: 0; }
+  .period-summary-title { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+  .period-calories { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 10px; }
+  .period-calories span { font-size: 10px; color: var(--text3); }
+  .period-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .period-macro { text-align: center; border-radius: 8px; background: var(--surface2); padding: 7px 3px; }
+  .period-macro-label { display: block; font-size: 9px; color: var(--text3); margin-bottom: 3px; }
+  .period-macro-value { font-family: var(--font-display); font-size: 11px; font-weight: 800; }
 
   /* STATS */
   .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px 16px; }
@@ -486,27 +496,18 @@
 <!-- ══════════════════════════════════ CHARTS VIEW ══════════════════════════════════ -->
 <div class="view" id="viewCharts">
   <div class="charts-section">
-    <div class="chart-tabs">
-      <div class="chart-tab active" id="tabWeek" onclick="switchChartTab('week')">7 jours</div>
-      <div class="chart-tab" id="tabMonth" onclick="switchChartTab('month')">30 jours</div>
-      <div class="chart-tab" id="tabHistory" onclick="switchChartTab('history')">Depuis le début</div>
-    </div>
-
     <div id="rangeCharts">
-    <!-- Calories chart -->
-    <div class="chart-card">
-      <div class="chart-title" id="chartTitle">CALORIES — 7 DERNIERS JOURS</div>
-      <div class="bar-chart" id="barChart"></div>
-      <div class="chart-avg">
-        <span class="chart-avg-label">Moyenne quotidienne</span>
-        <span class="chart-avg-val" id="chartAvg">0 kcal</span>
+    <div class="period-summary-grid">
+      <div class="period-summary-card">
+        <div class="period-summary-title">Semaine — lundi à hier</div>
+        <div class="period-calories" id="weekCalories">0 <span>kcal/j</span></div>
+        <div class="period-macros" id="weekMacros"></div>
       </div>
-    </div>
-
-    <!-- Macros chart -->
-    <div class="chart-card">
-      <div class="chart-title">MACROS — MOYENNES</div>
-      <div class="macro-chart-rows" id="macroChartRows"></div>
+      <div class="period-summary-card">
+        <div class="period-summary-title">Mois — 1er à hier</div>
+        <div class="period-calories" id="monthCalories">0 <span>kcal/j</span></div>
+        <div class="period-macros" id="monthMacros"></div>
+      </div>
     </div>
 
     <!-- Weight chart -->
@@ -534,7 +535,7 @@
   </div>
 
   <div id="historyPanel" style="display:none;">
-    <div class="chart-card">
+    <div class="chart-card" style="margin-top:20px;">
       <div class="chart-title">CALORIES — TOUS LES JOURS</div>
       <form class="history-month-form" onsubmit="event.preventDefault();renderHistory()">
         <div class="history-month-field">
@@ -555,13 +556,6 @@
       <div class="history-intro" id="limitHistoryInfo"></div>
       <div class="history-scroll" id="limitHistoryList"></div>
     </div>
-  </div>
-  <div id="rangeStats">
-  <div class="section-divider"></div>
-  <div class="section-header">
-  <div class="section-title">📊 Statistiques</div>
-  </div>
-  <div class="stats-grid" id="statsGrid"></div>
   </div>
   <div class="scroll-pad"></div>
 </div>
@@ -1010,7 +1004,7 @@ let state = {
 let selectedDay = todayKey();
 let editingEntryId = null;
 let selectedEmoji = EMOJIS[0];
-let currentChartTab = 'week';
+let currentChartTab = 'history';
 let currentView = 'home';
 let selectedWeightDate = null;
 
@@ -1351,99 +1345,60 @@ function renderEntries() {
 // CHARTS
 // ═══════════════════════════════════════════════════════
 function renderCharts() {
-  const isHistory = currentChartTab === 'history';
-  document.getElementById('tabWeek').classList.toggle('active', currentChartTab === 'week');
-  document.getElementById('tabMonth').classList.toggle('active', currentChartTab === 'month');
-  document.getElementById('tabHistory').classList.toggle('active', isHistory);
-  document.getElementById('rangeCharts').style.display = isHistory ? 'none' : 'block';
-  document.getElementById('historyPanel').style.display = isHistory ? 'block' : 'none';
-  document.getElementById('rangeStats').style.display = isHistory ? 'none' : 'block';
-  if (isHistory) {
-    renderHistory();
-    return;
-  }
+  document.getElementById('rangeCharts').style.display = 'block';
+  document.getElementById('historyPanel').style.display = 'block';
+  renderHistory();
 
-  const days = currentChartTab === 'week' ? 7 : 30;
-  document.getElementById('chartTitle').textContent =
-    `CALORIES — ${days === 7 ? '7 DERNIERS JOURS' : '30 DERNIERS JOURS'}`;
-
-  const data = [];
   const today = new Date();
-  let totalCal = 0, countCal = 0;
-  let totP = 0, totG = 0, totL = 0, countM = 0;
+  const todayKeyValue = todayKey();
+  const toDateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = d.toISOString().split('T')[0];
-    const cal = getTotalCal(key);
-    const macros = getTotalMacros(key);
-    const dayLimit = getDayLimit(key);
-    data.push({ key, cal, macros, limit: dayLimit, label: days === 7 ? DAYS_FR[d.getDay()] : d.getDate() });
-    if (cal > 0) { totalCal += cal; countCal++; }
-    const hasMacros = macros.prot || macros.gluc || macros.lip;
-    if (hasMacros) { totP += macros.prot; totG += macros.gluc; totL += macros.lip; countM++; }
+  const dayBefore = new Date(today);
+  dayBefore.setDate(today.getDate() - 1);
+
+  const monday = new Date(today);
+  const jsDay = monday.getDay();
+  monday.setDate(today.getDate() - (jsDay === 0 ? 6 : jsDay - 1));
+
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  function averages(startDate) {
+    const totals = { cal: 0, prot: 0, gluc: 0, lip: 0 };
+    let calDays = 0, macroDays = 0;
+    const cursor = new Date(startDate);
+    while (cursor <= dayBefore) {
+      const key = toDateKey(cursor);
+      const cal = getTotalCal(key);
+      const macros = getTotalMacros(key);
+      if (cal > 0) { totals.cal += cal; calDays++; }
+      if (macros.prot || macros.gluc || macros.lip) {
+        totals.prot += macros.prot;
+        totals.gluc += macros.gluc;
+        totals.lip += macros.lip;
+        macroDays++;
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return {
+      cal: calDays ? Math.round(totals.cal / calDays) : 0,
+      prot: macroDays ? Math.round(totals.prot / macroDays) : 0,
+      gluc: macroDays ? Math.round(totals.gluc / macroDays) : 0,
+      lip: macroDays ? Math.round(totals.lip / macroDays) : 0
+    };
   }
 
-  const avg = countCal ? Math.round(totalCal / countCal) : 0;
-  const avgP = countM ? Math.round(totP / countM) : 0;
-  const avgG = countM ? Math.round(totG / countM) : 0;
-  const avgL = countM ? Math.round(totL / countM) : 0;
+  function renderPeriodSummary(prefix, startDate) {
+    const values = averages(startDate);
+    document.getElementById(prefix + 'Calories').innerHTML = `${values.cal} <span>kcal/j</span>`;
+    document.getElementById(prefix + 'Macros').innerHTML = `
+      <div class="period-macro"><span class="period-macro-label">P</span><span class="period-macro-value" style="color:var(--macro-p);">${values.prot} g</span></div>
+      <div class="period-macro"><span class="period-macro-label">G</span><span class="period-macro-value" style="color:var(--macro-g);">${values.gluc} g</span></div>
+      <div class="period-macro"><span class="period-macro-label">L</span><span class="period-macro-value" style="color:var(--macro-l);">${values.lip} g</span></div>`;
+  }
 
-  document.getElementById('chartAvg').textContent = avg + ' kcal';
+  renderPeriodSummary('week', monday);
+  renderPeriodSummary('month', monthStart);
 
-  // Calorie bar chart
-  const chart = document.getElementById('barChart');
-  chart.innerHTML = '';
-  const maxCal = Math.max(...data.map(d => Math.max(d.cal, d.limit)), 100);
-
-  data.forEach(d => {
-    const heightPct = maxCal > 0 ? (d.cal / maxCal) * 100 : 0;
-    const limitPct = (d.limit / maxCal) * 100;
-    const color = d.cal > d.limit ? 'var(--accent2)' : d.cal > d.limit * 0.8 ? 'var(--accent4)' : 'var(--accent)';
-    const isToday = d.key === todayKey();
-    const group = document.createElement('div');
-    group.className = 'bar-group';
-    group.innerHTML = `
-      <div class="bar-col-wrap">
-        <div class="bar-limit-line" style="bottom:${limitPct}%;"></div>
-        <div class="bar-col" style="height:${heightPct}%;background:${color};opacity:${isToday ? 1 : 0.7};"></div>
-      </div>
-      <div class="bar-day-label" style="${isToday ? 'color:var(--accent);' : ''}">${d.label}</div>`;
-    chart.appendChild(group);
-  });
-
-  // Macro charts
-  const macroChartRows = document.getElementById('macroChartRows');
-  macroChartRows.innerHTML = '';
-  const macroDefs = [
-    { key:'prot', label:'Protéines', color:'var(--macro-p)', avg: avgP, goal: state.globalProt },
-    { key:'gluc', label:'Glucides',  color:'var(--macro-g)', avg: avgG, goal: state.globalGluc },
-    { key:'lip',  label:'Lipides',   color:'var(--macro-l)', avg: avgL, goal: state.globalLip  },
-  ];
-  macroDefs.forEach(m => {
-    const maxVal = Math.max(...data.map(d => d.macros[m.key]), m.goal, 1);
-    const goalPct = (m.goal / maxVal) * 100;
-    const row = document.createElement('div');
-    row.className = 'macro-chart-row';
-    const barsHtml = data.map(d => {
-      const h = (d.macros[m.key] / maxVal) * 100;
-      const isToday = d.key === todayKey();
-      return `<div class="macro-chart-col" style="height:${h}%;background:${m.color};opacity:${isToday?1:0.65};"></div>`;
-    }).join('');
-    row.innerHTML = `
-      <div class="macro-chart-header">
-        <div class="macro-chart-name" style="color:${m.color}">${m.label}</div>
-        <div class="macro-chart-avg" style="color:${m.color}">moy. ${m.avg}g <span style="font-size:10px;color:var(--text3);font-weight:400;">/ ${m.goal}g</span></div>
-      </div>
-      <div class="macro-chart-bars" style="position:relative;">
-        <div style="position:absolute;width:100%;height:1.5px;background:${m.color};opacity:0.25;bottom:${goalPct}%;left:0;"></div>
-        ${barsHtml}
-      </div>`;
-    macroChartRows.appendChild(row);
-  });
-
-  renderStats(data, avg);
   renderWeightChart();
 }
 
@@ -1508,21 +1463,20 @@ function renderHistory() {
     const weightValue = weight == null
       ? '—'
       : `${weight.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} kg`;
-    const weekday = new Date(key + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
     rows.push(`<tr>
-      <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${dayNumber} ${weekday}</button></td>
+      <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${formatHistoryDate(key)}</button></td>
       <td class="history-value">${calories}</td>
       <td>${macroValue('prot')}</td>
-      <td>${macroValue('gluc')}</td>
-      <td>${macroValue('lip')}</td>
       <td>${steps}</td>
       <td>${runningKm}</td>
       <td>${weightValue}</td>
+      <td>${macroValue('gluc')}</td>
+      <td>${macroValue('lip')}</td>
       <td>${getDayLimit(key)} kcal</td>
     </tr>`);
   }
   historyEl.innerHTML = `<table class="history-table">
-    <thead><tr><th>Jour</th><th>Calories</th><th>P (g)</th><th>G (g)</th><th>L (g)</th><th>Pas</th><th>Course</th><th>Poids</th><th>Limite</th></tr></thead>
+    <thead><tr><th>Date</th><th>Calories</th><th>P (g)</th><th>Pas</th><th>Km</th><th>Poids</th><th>G (g)</th><th>L (g)</th><th>Limite</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 
@@ -1554,7 +1508,10 @@ function renderHistory() {
 }
 
 function formatHistoryDate(key) {
-  return new Date(key + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  const date = new Date(key + 'T00:00:00');
+  const monthNames = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun', 'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
+  const weekdayNames = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+  return `${weekdayNames[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]}`;
 }
 
 function daysBetween(start, end) {
@@ -1798,13 +1755,6 @@ function calcStreak() {
   return streak;
 }
 
-function switchChartTab(tab) {
-  currentChartTab = tab;
-  document.getElementById('tabWeek').classList.toggle('active', tab === 'week');
-  document.getElementById('tabMonth').classList.toggle('active', tab === 'month');
-  document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
-  renderCharts();
-}
 
 // ═══════════════════════════════════════════════════════
 // MODALS
