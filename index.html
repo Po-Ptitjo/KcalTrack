@@ -27,6 +27,7 @@
     --macro-p: #a78bfa;   /* protéines — violet */
     --macro-g: #34d399;   /* glucides  — vert menthe */
     --macro-l: #fb923c;   /* lipides   — orange */
+    --macro-f: #6bc5ff;   /* fibres — bleu */
     --text: #f0f0f8;
     --text2: #9090b0;
     --text3: #5a5a7a;
@@ -226,9 +227,12 @@
   .history-scroll { overflow-x: auto; margin: 0 -4px; }
   .history-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
   .history-table th { color: var(--text3); font-size: 10px; text-align: left; text-transform: uppercase; letter-spacing: 0.7px; padding: 8px 6px; border-bottom: 1px solid var(--border); }
-  .history-table td { color: var(--text2); padding: 10px 6px; border-bottom: 1px solid var(--border); }
+  .history-table td { color: var(--text2); padding: 10px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
   .history-table tr:last-child td { border-bottom: 0; }
   .history-table .history-value { color: var(--text); font-family: var(--font-display); font-weight: 700; }
+  .history-cell-stack { display: flex; flex-direction: column; gap: 4px; }
+  .history-cell-line { min-height: 1em; }
+  .history-cell-label { color: var(--text3); font-weight: 700; }
   .history-open-day { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 4px; }
   .history-month-form { display: grid; grid-template-columns: 1fr 0.8fr auto; gap: 8px; align-items: end; margin-bottom: 14px; }
   .history-month-field { min-width: 0; }
@@ -270,7 +274,7 @@
   .period-summary-title { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
   .period-calories { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--accent); margin-bottom: 10px; }
   .period-calories span { font-size: 10px; color: var(--text3); }
-  .period-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .period-macros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
   .period-macro { text-align: center; border-radius: 8px; background: var(--surface2); padding: 7px 3px; }
   .period-macro-label { display: block; font-size: 9px; color: var(--text3); margin-bottom: 3px; }
   .period-macro-value { font-family: var(--font-display); font-size: 11px; font-weight: 800; }
@@ -305,7 +309,7 @@
   .form-input::placeholder { color: var(--text3); }
 
   /* MACROS FORM ROW */
-  .macros-form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .macros-form-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .macro-form-field { display: flex; flex-direction: column; gap: 6px; }
   .macro-form-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 5px; }
   .macro-form-label .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -330,7 +334,7 @@
   /* MACROS CALC RESULTS */
   .macro-calc-results { display: none; margin-top: 8px; padding: 10px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
   .macro-calc-results.visible { display: block; }
-  .macro-calc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .macro-calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .macro-calc-item { text-align: center; }
   .macro-calc-item-val { font-family: var(--font-display); font-size: 14px; font-weight: 800; }
   .macro-calc-item-lbl { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
@@ -451,6 +455,11 @@
           <div class="macro-label" style="color:var(--macro-l)">L</div>
           <div class="macro-track"><div class="macro-bar" id="macroBarL" style="width:0%;background:var(--macro-l);"></div></div>
           <div class="macro-val" id="macroValL" style="color:var(--macro-l)">0 / — g</div>
+        </div>
+        <div class="macro-row">
+          <div class="macro-label" style="color:var(--macro-f)">F</div>
+          <div class="macro-track"><div class="macro-bar" id="macroBarF" style="width:0%;background:var(--macro-f);"></div></div>
+          <div class="macro-val" id="macroValF" style="color:var(--macro-f)">0 / — g</div>
         </div>
       </div>
 
@@ -577,7 +586,7 @@
     <!-- Macro objectives -->
     <div class="bar-wrap" style="margin-bottom:16px;">
       <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;">Objectifs macros par défaut (g/jour)</div>
-      <div class="macro-settings-row">
+      <div class="macro-settings-row" style="grid-template-columns:repeat(4,1fr);">
         <div class="macro-setting-field">
           <div class="macro-setting-lbl" style="color:var(--macro-p)"><span class="dot" style="background:var(--macro-p)"></span>Protéines</div>
           <input type="number" class="form-input" id="globalProtInput" placeholder="150" min="0" max="999" style="padding:12px 10px;text-align:center;">
@@ -589,6 +598,10 @@
         <div class="macro-setting-field">
           <div class="macro-setting-lbl" style="color:var(--macro-l)"><span class="dot" style="background:var(--macro-l)"></span>Lipides</div>
           <input type="number" class="form-input" id="globalLipInput" placeholder="70" min="0" max="999" style="padding:12px 10px;text-align:center;">
+        </div>
+        <div class="macro-setting-field">
+          <div class="macro-setting-lbl" style="color:var(--macro-f)"><span class="dot" style="background:var(--macro-f)"></span>Fibres</div>
+          <input type="number" class="form-input" id="globalFiberInput" placeholder="30" min="0" max="999" style="padding:12px 10px;text-align:center;">
         </div>
       </div>
       <button class="btn-save" style="width:100%;border-radius:10px;" onclick="saveGlobalMacros()">Enregistrer les objectifs</button>
@@ -708,10 +721,11 @@
           <div class="settings-card-title">Poids (100g)</div>
           <input type="text" class="form-input" id="foodWeightName" placeholder="Ex: Riz blanc" style="margin-bottom:8px;">
           <input type="number" class="form-input" id="foodWeightCal" placeholder="Calories / 100g" min="0" step="1" style="margin-bottom:8px;">
-          <div class="macro-settings-row" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:8px;">
+          <div class="macro-settings-row" style="grid-template-columns:repeat(4,1fr); margin-bottom:8px;">
             <input type="number" class="form-input" id="foodWeightProt" placeholder="P" style="padding:8px 6px;text-align:center;">
             <input type="number" class="form-input" id="foodWeightGluc" placeholder="G" style="padding:8px 6px;text-align:center;">
             <input type="number" class="form-input" id="foodWeightLip" placeholder="L" style="padding:8px 6px;text-align:center;">
+            <input type="number" class="form-input" id="foodWeightFiber" placeholder="F" style="padding:8px 6px;text-align:center;">
           </div>
           <button class="tiny-btn" onclick="addFoodItem('weight')">Ajouter à la base poids</button>
           <div id="foodWeightList" class="db-list"></div>
@@ -720,10 +734,11 @@
           <div class="settings-card-title">Unité</div>
           <input type="text" class="form-input" id="foodUnitName" placeholder="Ex: Œuf" style="margin-bottom:8px;">
           <input type="number" class="form-input" id="foodUnitCal" placeholder="Calories / unité" min="0" step="1" style="margin-bottom:8px;">
-          <div class="macro-settings-row" style="grid-template-columns:1fr 1fr 1fr; margin-bottom:8px;">
+          <div class="macro-settings-row" style="grid-template-columns:repeat(4,1fr); margin-bottom:8px;">
             <input type="number" class="form-input" id="foodUnitProt" placeholder="P" style="padding:8px 6px;text-align:center;">
             <input type="number" class="form-input" id="foodUnitGluc" placeholder="G" style="padding:8px 6px;text-align:center;">
             <input type="number" class="form-input" id="foodUnitLip" placeholder="L" style="padding:8px 6px;text-align:center;">
+            <input type="number" class="form-input" id="foodUnitFiber" placeholder="F" style="padding:8px 6px;text-align:center;">
           </div>
           <button class="tiny-btn" onclick="addFoodItem('unit')">Ajouter à la base unité</button>
           <div id="foodUnitList" class="db-list"></div>
@@ -844,17 +859,22 @@
           <div class="macro-form-label" style="color:var(--macro-l)"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--macro-l);flex-shrink:0;"></span>Lipides</div>
           <input type="number" class="macro-form-input" id="inputLip" placeholder="g" min="0" max="999" oninput="calcMacrosFromQty()" style="border-color:rgba(251,146,60,0.25);">
         </div>
+        <div class="macro-form-field">
+          <div class="macro-form-label" style="color:var(--macro-f)"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--macro-f);flex-shrink:0;"></span>Fibres</div>
+          <input type="number" class="macro-form-input" id="inputFiber" placeholder="g" min="0" max="999" oninput="calcMacrosFromQty()" style="border-color:rgba(107,197,255,0.25);">
+        </div>
       </div>
 
       <!-- Macro calculator (per 100g) -->
       <div class="calc-widget" style="margin-top:10px;border-color:rgba(167,139,250,0.2);">
         <div class="calc-label" style="color:var(--macro-p)">🧮 Macros depuis les valeurs / 100g</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
           <input type="number" class="calc-input" id="mCalcP100" placeholder="P/100g" min="0" max="999" oninput="calcMacrosFromNutri()">
           <input type="number" class="calc-input" id="mCalcG100" placeholder="G/100g" min="0" max="999" oninput="calcMacrosFromNutri()">
           <input type="number" class="calc-input" id="mCalcL100" placeholder="L/100g" min="0" max="999" oninput="calcMacrosFromNutri()">
+          <input type="number" class="calc-input" id="mCalcF100" placeholder="F/100g" min="0" max="999" oninput="calcMacrosFromNutri()">
         </div>
-        <div style="font-size:10px;color:var(--text3);margin-bottom:6px;text-align:center;">↑ Protéines · Glucides · Lipides par 100g — quantité depuis le champ ci-dessus</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:6px;text-align:center;">↑ Protéines · Glucides · Lipides · Fibres par 100g — quantité depuis le champ ci-dessus</div>
         <div class="macro-calc-results" id="macroCalcResults">
           <div class="macro-calc-grid">
             <div class="macro-calc-item">
@@ -869,8 +889,12 @@
               <div class="macro-calc-item-val" style="color:var(--macro-l)" id="mCalcResL">—</div>
               <div class="macro-calc-item-lbl">Lipides g</div>
             </div>
+            <div class="macro-calc-item">
+              <div class="macro-calc-item-val" style="color:var(--macro-f)" id="mCalcResF">—</div>
+              <div class="macro-calc-item-lbl">Fibres g</div>
+            </div>
           </div>
-          <button class="calc-apply-all-btn" onclick="applyMacroCalcResult()">↑ Appliquer les 3 macros</button>
+          <button class="calc-apply-all-btn" onclick="applyMacroCalcResult()">↑ Appliquer les 4 macros</button>
         </div>
       </div>
     </div>
@@ -907,6 +931,10 @@
         <div class="macro-form-field">
           <div class="macro-form-label" style="color:var(--macro-l)"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--macro-l);flex-shrink:0;"></span>Lipides</div>
           <input type="number" class="macro-form-input" id="limitLip" placeholder="g" min="0" max="999" style="border-color:rgba(251,146,60,0.25);">
+        </div>
+        <div class="macro-form-field">
+          <div class="macro-form-label" style="color:var(--macro-f)"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--macro-f);flex-shrink:0;"></span>Fibres</div>
+          <input type="number" class="macro-form-input" id="limitFiber" placeholder="g" min="0" max="999" style="border-color:rgba(107,197,255,0.25);">
         </div>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:6px;">Laisser vide pour utiliser les objectifs globaux.</div>
@@ -985,6 +1013,7 @@ let state = {
   globalProt: 150,
   globalGluc: 250,
   globalLip: 70,
+  globalFiber: 30,
   phase: 'maintenance',
   theme: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' },
   wallpaper: { dataUrl: '', label: '', width: '', height: '' },
@@ -997,7 +1026,7 @@ let state = {
   globalLimitHistory: [],
   days: {},
   weights: []
-  // days[key]: { limit, macroP?, macroG?, macroL?, note, entries:[{id,emoji,title,desc,cal,prot?,gluc?,lip?, source?, foodId?}] }
+  // days[key]: { limit, macroP?, macroG?, macroL?, macroF?, note, entries:[{id,emoji,title,desc,cal,prot?,gluc?,lip?,fiber?, source?, foodId?}] }
   // weights: [{ date:'YYYY-MM-DD', value: 72.4 }]
 };
 
@@ -1023,6 +1052,7 @@ function loadState() {
         globalProt: 150,
         globalGluc: 250,
         globalLip: 70,
+        globalFiber: 30,
         phase: 'maintenance',
         theme: { accent: '#c8f542', accent2: '#ff6b6b', accent3: '#6bc5ff', accent4: '#ffb347', bg: '#0a0a0f', surface: '#13131c', surface2: '#1c1c2e', text: '#f0f0f8' },
         wallpaper: { dataUrl: '', label: '', width: '', height: '' },
@@ -1166,12 +1196,13 @@ function getTotalCal(key) {
 
 function getTotalMacros(key) {
   const d = state.days[key];
-  if (!d) return { prot:0, gluc:0, lip:0 };
+  if (!d) return { prot:0, gluc:0, lip:0, fiber:0 };
   return d.entries.reduce((acc, e) => ({
     prot: acc.prot + (e.prot || 0),
     gluc: acc.gluc + (e.gluc || 0),
-    lip:  acc.lip  + (e.lip  || 0)
-  }), { prot:0, gluc:0, lip:0 });
+    lip:  acc.lip  + (e.lip  || 0),
+    fiber: acc.fiber + (e.fiber || 0)
+  }), { prot:0, gluc:0, lip:0, fiber:0 });
 }
 
 function getDayMacroGoals(key) {
@@ -1180,6 +1211,7 @@ function getDayMacroGoals(key) {
     prot: (d && d.macroP != null) ? d.macroP : state.globalProt,
     gluc: (d && d.macroG != null) ? d.macroG : state.globalGluc,
     lip:  (d && d.macroL != null) ? d.macroL : state.globalLip,
+    fiber: (d && d.macroF != null) ? d.macroF : state.globalFiber,
   };
 }
 
@@ -1275,6 +1307,7 @@ function renderHome() {
   renderMacroBar('P', totM.prot, goals.prot);
   renderMacroBar('G', totM.gluc, goals.gluc);
   renderMacroBar('L', totM.lip,  goals.lip);
+  renderMacroBar('F', totM.fiber, goals.fiber);
 
   // Day note
   const noteRow = document.getElementById('dayNoteRow');
@@ -1292,7 +1325,7 @@ function renderHome() {
 }
 
 function renderMacroBar(letter, val, goal) {
-  const idSuffix = { P:'P', G:'G', L:'L' }[letter];
+  const idSuffix = { P:'P', G:'G', L:'L', F:'F' }[letter];
   const pct = goal > 0 ? Math.min(100, Math.round((val / goal) * 100)) : 0;
   document.getElementById('macroBar' + idSuffix).style.width = pct + '%';
   document.getElementById('macroVal' + idSuffix).textContent =
@@ -1312,12 +1345,13 @@ function renderEntries() {
   list.innerHTML = '';
   day.entries.forEach((entry, idx) => {
     const color = COLORS[idx % COLORS.length];
-    const hasMacros = (entry.prot || entry.gluc || entry.lip);
+    const hasMacros = (entry.prot || entry.gluc || entry.lip || entry.fiber);
     const macroChips = hasMacros ? `
       <div class="entry-macros">
         ${entry.prot != null ? `<span class="macro-chip" style="background:rgba(167,139,250,0.15);color:var(--macro-p)">P ${entry.prot}g</span>` : ''}
         ${entry.gluc != null ? `<span class="macro-chip" style="background:rgba(52,211,153,0.15);color:var(--macro-g)">G ${entry.gluc}g</span>` : ''}
         ${entry.lip  != null ? `<span class="macro-chip" style="background:rgba(251,146,60,0.15);color:var(--macro-l)">L ${entry.lip}g</span>` : ''}
+        ${entry.fiber != null ? `<span class="macro-chip" style="background:rgba(107,197,255,0.15);color:var(--macro-f)">F ${entry.fiber}g</span>` : ''}
       </div>` : '';
     const card = document.createElement('div');
     card.className = 'entry-card';
@@ -1350,7 +1384,6 @@ function renderCharts() {
   renderHistory();
 
   const today = new Date();
-  const todayKeyValue = todayKey();
   const toDateKey = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
   const dayBefore = new Date(today);
@@ -1363,7 +1396,7 @@ function renderCharts() {
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
   function averages(startDate) {
-    const totals = { cal: 0, prot: 0, gluc: 0, lip: 0 };
+    const totals = { cal: 0, prot: 0, gluc: 0, lip: 0, fiber: 0 };
     let calDays = 0, macroDays = 0;
     const cursor = new Date(startDate);
     while (cursor <= dayBefore) {
@@ -1371,10 +1404,11 @@ function renderCharts() {
       const cal = getTotalCal(key);
       const macros = getTotalMacros(key);
       if (cal > 0) { totals.cal += cal; calDays++; }
-      if (macros.prot || macros.gluc || macros.lip) {
+      if (macros.prot || macros.gluc || macros.lip || macros.fiber) {
         totals.prot += macros.prot;
         totals.gluc += macros.gluc;
         totals.lip += macros.lip;
+        totals.fiber += macros.fiber;
         macroDays++;
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -1383,7 +1417,8 @@ function renderCharts() {
       cal: calDays ? Math.round(totals.cal / calDays) : 0,
       prot: macroDays ? Math.round(totals.prot / macroDays) : 0,
       gluc: macroDays ? Math.round(totals.gluc / macroDays) : 0,
-      lip: macroDays ? Math.round(totals.lip / macroDays) : 0
+      lip: macroDays ? Math.round(totals.lip / macroDays) : 0,
+      fiber: macroDays ? Math.round(totals.fiber / macroDays) : 0
     };
   }
 
@@ -1393,7 +1428,8 @@ function renderCharts() {
     document.getElementById(prefix + 'Macros').innerHTML = `
       <div class="period-macro"><span class="period-macro-label">P</span><span class="period-macro-value" style="color:var(--macro-p);">${values.prot} g</span></div>
       <div class="period-macro"><span class="period-macro-label">G</span><span class="period-macro-value" style="color:var(--macro-g);">${values.gluc} g</span></div>
-      <div class="period-macro"><span class="period-macro-label">L</span><span class="period-macro-value" style="color:var(--macro-l);">${values.lip} g</span></div>`;
+      <div class="period-macro"><span class="period-macro-label">L</span><span class="period-macro-value" style="color:var(--macro-l);">${values.lip} g</span></div>
+      <div class="period-macro"><span class="period-macro-label">F</span><span class="period-macro-value" style="color:var(--macro-f);">${values.fiber} g</span></div>`;
   }
 
   renderPeriodSummary('week', monday);
@@ -1455,7 +1491,8 @@ function renderHistory() {
       day.entries.some(entry => entry[macro] != null)
       ? `${Number(macros[macro].toFixed(1))} g`
       : '—';
-    const steps = day && day.steps != null ? `${day.steps.toLocaleString('fr-FR')}` : '—';
+    const macroLine = (label, macro) => `<div class="history-cell-line"><span class="history-cell-label">${label}:</span> ${macroValue(macro)}</div>`;
+    const steps = day && day.steps != null ? day.steps.toLocaleString('fr-FR') : '—';
     const runningKm = day && day.runningKm != null
       ? `${day.runningKm.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`
       : '—';
@@ -1464,19 +1501,15 @@ function renderHistory() {
       ? '—'
       : `${weight.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} kg`;
     rows.push(`<tr>
-      <td><button class="history-open-day" onclick="openHistoryDay('${key}')">${formatHistoryDate(key)}</button></td>
-      <td class="history-value">${calories}</td>
-      <td>${macroValue('prot')}</td>
-      <td>${steps}</td>
-      <td>${runningKm}</td>
-      <td>${weightValue}</td>
-      <td>${macroValue('gluc')}</td>
-      <td>${macroValue('lip')}</td>
-      <td>${getDayLimit(key)} kcal</td>
+      <td><div class="history-cell-stack"><button class="history-open-day" onclick="openHistoryDay('${key}')">${formatHistoryDate(key)}</button><span class="history-value">${calories}</span></div></td>
+      <td><div class="history-cell-stack">${macroLine('P', 'prot')}${macroLine('G', 'gluc')}${macroLine('L', 'lip')}${macroLine('F', 'fiber')}</div></td>
+      <td><div class="history-cell-stack"><span class="history-cell-line">Pas: ${steps}</span><span class="history-cell-line">Km: ${runningKm}</span></div></td>
+      <td class="history-value">${weightValue}</td>
+      <td class="history-value">${getDayLimit(key)} kcal</td>
     </tr>`);
   }
   historyEl.innerHTML = `<table class="history-table">
-    <thead><tr><th>Date</th><th>Calories</th><th>P (g)</th><th>Pas</th><th>Km</th><th>Poids</th><th>G (g)</th><th>L (g)</th><th>Limite</th></tr></thead>
+    <thead><tr><th>Date / Cal.</th><th>Macros</th><th>Activité</th><th>Poids</th><th>Limite</th></tr></thead>
     <tbody>${rows.join('')}</tbody>
   </table>`;
 
@@ -1762,8 +1795,8 @@ function calcStreak() {
 function openAddModal() {
   editingEntryId = null;
   document.getElementById('modalTitle').textContent = 'Ajouter un repas';
-  ['inputTitle','inputDesc','inputCal','inputProt','inputGluc','inputLip',
-   'calcPer100','calcQty','mCalcP100','mCalcG100','mCalcL100','foodSourceQty'].forEach(id => {
+  ['inputTitle','inputDesc','inputCal','inputProt','inputGluc','inputLip','inputFiber',
+   'calcPer100','calcQty','mCalcP100','mCalcG100','mCalcL100','mCalcF100','foodSourceQty'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('entrySourceSelect').value = 'manual';
@@ -1791,9 +1824,10 @@ function editEntry(id) {
   document.getElementById('inputProt').value  = entry.prot != null ? entry.prot : '';
   document.getElementById('inputGluc').value  = entry.gluc != null ? entry.gluc : '';
   document.getElementById('inputLip').value   = entry.lip  != null ? entry.lip  : '';
+  document.getElementById('inputFiber').value = entry.fiber != null ? entry.fiber : '';
   document.getElementById('entrySourceSelect').value = 'manual';
   document.getElementById('foodSourceBlock').style.display = 'none';
-  ['mCalcP100','mCalcG100','mCalcL100','foodSourceQty'].forEach(id => document.getElementById(id).value = '');
+  ['mCalcP100','mCalcG100','mCalcL100','mCalcF100','foodSourceQty'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('macroCalcResults').classList.remove('visible');
   ['errTitle','errCal'].forEach(id => document.getElementById(id).classList.remove('show'));
   selectedEmoji = entry.emoji;
@@ -1837,18 +1871,21 @@ function calcMacrosFromNutri() {
   const p100 = parseFloat(document.getElementById('mCalcP100').value);
   const g100 = parseFloat(document.getElementById('mCalcG100').value);
   const l100 = parseFloat(document.getElementById('mCalcL100').value);
+  const f100 = parseFloat(document.getElementById('mCalcF100').value);
   const resultsEl = document.getElementById('macroCalcResults');
 
   const hasQty = !isNaN(qty) && qty > 0;
-  const hasAny = (!isNaN(p100) && p100 >= 0) || (!isNaN(g100) && g100 >= 0) || (!isNaN(l100) && l100 >= 0);
+  const hasAny = [p100, g100, l100, f100].some(value => !isNaN(value) && value >= 0);
 
   if (hasQty && hasAny) {
     const rP = (!isNaN(p100) && p100 >= 0) ? Math.round((p100 * qty) / 100) : null;
     const rG = (!isNaN(g100) && g100 >= 0) ? Math.round((g100 * qty) / 100) : null;
     const rL = (!isNaN(l100) && l100 >= 0) ? Math.round((l100 * qty) / 100) : null;
+    const rF = (!isNaN(f100) && f100 >= 0) ? Math.round((f100 * qty) / 100) : null;
     document.getElementById('mCalcResP').textContent = rP != null ? rP : '—';
     document.getElementById('mCalcResG').textContent = rG != null ? rG : '—';
     document.getElementById('mCalcResL').textContent = rL != null ? rL : '—';
+    document.getElementById('mCalcResF').textContent = rF != null ? rF : '—';
     resultsEl.classList.add('visible');
   } else {
     resultsEl.classList.remove('visible');
@@ -1863,10 +1900,12 @@ function applyMacroCalcResult() {
   const p100 = parseFloat(document.getElementById('mCalcP100').value);
   const g100 = parseFloat(document.getElementById('mCalcG100').value);
   const l100 = parseFloat(document.getElementById('mCalcL100').value);
+  const f100 = parseFloat(document.getElementById('mCalcF100').value);
   if (!isNaN(qty) && qty > 0) {
     if (!isNaN(p100) && p100 >= 0) document.getElementById('inputProt').value = Math.round((p100 * qty) / 100);
     if (!isNaN(g100) && g100 >= 0) document.getElementById('inputGluc').value = Math.round((g100 * qty) / 100);
     if (!isNaN(l100) && l100 >= 0) document.getElementById('inputLip').value  = Math.round((l100 * qty) / 100);
+    if (!isNaN(f100) && f100 >= 0) document.getElementById('inputFiber').value = Math.round((f100 * qty) / 100);
     showToast('✅ Macros appliquées');
   }
 }
@@ -1878,6 +1917,7 @@ function saveEntry() {
   const protRaw = document.getElementById('inputProt').value;
   const glucRaw = document.getElementById('inputGluc').value;
   const lipRaw  = document.getElementById('inputLip').value;
+  const fiberRaw = document.getElementById('inputFiber').value;
 
   let valid = true;
   if (!title) { document.getElementById('errTitle').classList.add('show'); valid = false; }
@@ -1889,14 +1929,15 @@ function saveEntry() {
   const prot = protRaw !== '' ? parseInt(protRaw) : null;
   const gluc = glucRaw !== '' ? parseInt(glucRaw) : null;
   const lip  = lipRaw  !== '' ? parseInt(lipRaw)  : null;
+  const fiber = fiberRaw !== '' ? parseInt(fiberRaw) : null;
 
   const day = getDay(selectedDay);
   if (editingEntryId) {
     const entry = day.entries.find(e => e.id === editingEntryId);
-    if (entry) Object.assign(entry, { emoji: selectedEmoji, title, desc, cal: calRaw, prot, gluc, lip });
+    if (entry) Object.assign(entry, { emoji: selectedEmoji, title, desc, cal: calRaw, prot, gluc, lip, fiber });
     showToast('✅ Repas modifié');
   } else {
-    day.entries.push({ id: uid(), emoji: selectedEmoji, title, desc, cal: calRaw, prot, gluc, lip });
+    day.entries.push({ id: uid(), emoji: selectedEmoji, title, desc, cal: calRaw, prot, gluc, lip, fiber });
     showToast('✅ Repas ajouté');
   }
   saveState();
@@ -1960,7 +2001,7 @@ async function shareDay() {
   const text = [
     `KCalTrack — ${date}`,
     `Calories : ${getTotalCal(selectedDay)} / ${limit} kcal`,
-    `Macros : protéines ${macros.prot} g · glucides ${macros.gluc} g · lipides ${macros.lip} g`,
+    `Macros : protéines ${macros.prot} g · glucides ${macros.gluc} g · lipides ${macros.lip} g · fibres ${macros.fiber} g`,
     `Pas : ${optionalValue(day.steps)}`,
     `Course à pied : ${day.runningKm == null ? 'Non renseignée' : `${day.runningKm} km`}`,
     `Poids : ${weight == null ? 'Non renseigné' : `${weight} kg`}`,
@@ -2009,6 +2050,7 @@ function openLimitModal() {
   document.getElementById('limitProt').value = day.macroP != null ? day.macroP : '';
   document.getElementById('limitGluc').value = day.macroG != null ? day.macroG : '';
   document.getElementById('limitLip').value  = day.macroL != null ? day.macroL  : '';
+  document.getElementById('limitFiber').value = day.macroF != null ? day.macroF : '';
   document.getElementById('errLimit').classList.remove('show');
   openModal('limitModal');
   setTimeout(() => document.getElementById('inputLimit').focus(), 400);
@@ -2025,6 +2067,7 @@ function saveLimit() {
   const pRaw = document.getElementById('limitProt').value;
   const gRaw = document.getElementById('limitGluc').value;
   const lRaw = document.getElementById('limitLip').value;
+  const fRaw = document.getElementById('limitFiber').value;
   const day = getDay(selectedDay);
   day.limit  = val;
   day.limitOverride = true;
@@ -2032,6 +2075,7 @@ function saveLimit() {
   day.macroP = pRaw !== '' ? parseInt(pRaw) : null;
   day.macroG = gRaw !== '' ? parseInt(gRaw) : null;
   day.macroL = lRaw !== '' ? parseInt(lRaw) : null;
+  day.macroF = fRaw !== '' ? parseInt(fRaw) : null;
   saveState();
   closeModal('limitModal');
   renderAll();
@@ -2051,12 +2095,14 @@ function saveGlobalMacros() {
   const p = parseInt(document.getElementById('globalProtInput').value);
   const g = parseInt(document.getElementById('globalGlucInput').value);
   const l = parseInt(document.getElementById('globalLipInput').value);
-  if (isNaN(p) || p < 0 || isNaN(g) || g < 0 || isNaN(l) || l < 0) {
+  const f = parseInt(document.getElementById('globalFiberInput').value);
+  if (isNaN(p) || p < 0 || isNaN(g) || g < 0 || isNaN(l) || l < 0 || isNaN(f) || f < 0) {
     showToast('❌ Valeurs invalides'); return;
   }
   state.globalProt = p;
   state.globalGluc = g;
   state.globalLip  = l;
+  state.globalFiber = f;
   saveState();
   showToast('✅ Objectifs macros enregistrés');
 }
@@ -2094,6 +2140,7 @@ function renderSettings() {
     document.getElementById('globalProtInput').value = state.globalProt;
     document.getElementById('globalGlucInput').value = state.globalGluc;
     document.getElementById('globalLipInput').value = state.globalLip;
+    document.getElementById('globalFiberInput').value = state.globalFiber;
   }
 
   renderFoodDatabaseLists();
@@ -2354,7 +2401,7 @@ function renderFoodDatabaseLists() {
       row.innerHTML = `
         <div>
           <div class="db-item-name">${escHtml(item.name)}</div>
-          <div class="db-item-meta">${item.cal} kcal · P ${item.prot ?? 0}g · G ${item.gluc ?? 0}g · L ${item.lip ?? 0}g</div>
+          <div class="db-item-meta">${item.cal} kcal · P ${item.prot ?? 0}g · G ${item.gluc ?? 0}g · L ${item.lip ?? 0}g · F ${item.fiber ?? 0}g</div>
         </div>
         <button class="db-item-delete" onclick="removeFoodItem('${type}', '${item.id}')">Suppr.</button>`;
       container.appendChild(row);
@@ -2371,6 +2418,7 @@ function addFoodItem(type) {
   const protInput = type === 'weight' ? document.getElementById('foodWeightProt') : document.getElementById('foodUnitProt');
   const glucInput = type === 'weight' ? document.getElementById('foodWeightGluc') : document.getElementById('foodUnitGluc');
   const lipInput = type === 'weight' ? document.getElementById('foodWeightLip') : document.getElementById('foodUnitLip');
+  const fiberInput = type === 'weight' ? document.getElementById('foodWeightFiber') : document.getElementById('foodUnitFiber');
 
   const name = nameInput.value.trim();
   const cal = Number(calInput.value);
@@ -2384,12 +2432,13 @@ function addFoodItem(type) {
     cal,
     prot: protInput.value === '' ? null : Number(protInput.value),
     gluc: glucInput.value === '' ? null : Number(glucInput.value),
-    lip: lipInput.value === '' ? null : Number(lipInput.value)
+    lip: lipInput.value === '' ? null : Number(lipInput.value),
+    fiber: fiberInput.value === '' ? null : Number(fiberInput.value)
   };
   if (!state.foodDb) state.foodDb = { weight: [], unit: [] };
   state.foodDb[type].push(item);
   saveState();
-  nameInput.value = ''; calInput.value = ''; protInput.value = ''; glucInput.value = ''; lipInput.value = '';
+  nameInput.value = ''; calInput.value = ''; protInput.value = ''; glucInput.value = ''; lipInput.value = ''; fiberInput.value = '';
   renderFoodDatabaseLists();
   renderFoodSourceSelect();
   showToast('✅ Aliment ajouté');
@@ -2445,6 +2494,7 @@ function applySelectedFoodToEntry() {
   document.getElementById('inputProt').value = item.prot != null ? Math.round((item.prot || 0) * scale) : '';
   document.getElementById('inputGluc').value = item.gluc != null ? Math.round((item.gluc || 0) * scale) : '';
   document.getElementById('inputLip').value = item.lip != null ? Math.round((item.lip || 0) * scale) : '';
+  document.getElementById('inputFiber').value = item.fiber != null ? Math.round((item.fiber || 0) * scale) : '';
   document.getElementById('errTitle').classList.remove('show');
   document.getElementById('errCal').classList.remove('show');
   showToast('✅ Aliment ajouté au formulaire');
@@ -2482,9 +2532,10 @@ function importCSVFromFile(files) {
         const prot = item['proteines (g)'] || item.proteines || item.prot || '';
         const gluc = item['glucides (g)'] || item.glucides || item.gluc || '';
         const lip = item['lipides (g)'] || item.lipides || item.lip || '';
+        const fiber = item['fibres (g)'] || item.fibres || item.fiber || item.f || '';
         if (!date || !Number.isFinite(cal) || cal <= 0) return;
         const day = getDay(date);
-        day.entries.push({ id: uid(), emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], title, desc, cal, prot: prot !== '' ? Number(prot) : null, gluc: gluc !== '' ? Number(gluc) : null, lip: lip !== '' ? Number(lip) : null, source: 'csv' });
+        day.entries.push({ id: uid(), emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)], title, desc, cal, prot: prot !== '' ? Number(prot) : null, gluc: gluc !== '' ? Number(gluc) : null, lip: lip !== '' ? Number(lip) : null, fiber: fiber !== '' ? Number(fiber) : null, source: 'csv' });
         imported++;
       });
       saveState();
@@ -2529,10 +2580,10 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 // EXPORT
 // ═══════════════════════════════════════════════════════
 function exportCSV() {
-  let csv = 'Date,Titre,Description,Calories,Proteines (g),Glucides (g),Lipides (g)\n';
+  let csv = 'Date,Titre,Description,Calories,Proteines (g),Glucides (g),Lipides (g),Fibres (g)\n';
   Object.keys(state.days).sort().forEach(key => {
     state.days[key].entries.forEach(e => {
-      csv += `"${key}","${e.title}","${e.desc || ''}",${e.cal},${e.prot ?? ''},${e.gluc ?? ''},${e.lip ?? ''}\n`;
+      csv += `"${key}","${e.title}","${e.desc || ''}",${e.cal},${e.prot ?? ''},${e.gluc ?? ''},${e.lip ?? ''},${e.fiber ?? ''}\n`;
     });
   });
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
